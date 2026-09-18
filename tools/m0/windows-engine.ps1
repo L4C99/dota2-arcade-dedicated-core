@@ -3,7 +3,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][ValidateSet('launch', 'observe', 'force-stop')][string]$Action,
-    [Parameter(Mandatory)][string]$RunDirectory
+    [Parameter(Mandatory)][string]$RunDirectory,
+    [switch]$FaultAfterStartBeforeIdentity
 )
 $ErrorActionPreference = 'Stop'
 if (-not [IO.Path]::IsPathFullyQualified($RunDirectory)) { throw 'Absolute run directory required' }
@@ -42,6 +43,8 @@ if ($Action -eq 'launch') {
     $startInfo.CreateNoWindow = $true
     foreach ($argument in $arguments) { $startInfo.ArgumentList.Add($argument) }
     $engineProcess = [Diagnostics.Process]::Start($startInfo)
+    # Explicit M0 fault injection: leave intent without identity, bypassing cleanup.
+    if ($FaultAfterStartBeforeIdentity) { [Environment]::Exit(73) }
     try {
         $identity = @{ pid = $engineProcess.Id; startTimeUtc = $engineProcess.StartTime.ToUniversalTime().ToString('o'); executable = $engineProcess.MainModule.FileName; runId = $config.runId; recordedAt = [DateTime]::UtcNow.ToString('o') }
         $identity | ConvertTo-Json | Set-Content -LiteralPath $manifestPath -Encoding utf8
