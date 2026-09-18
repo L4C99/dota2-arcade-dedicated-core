@@ -14,7 +14,9 @@
 
 当前工具：`go run ./cmd/d2core m0-inspect` 输出 JSON，缺失资源明确标为 `missing_input`，引擎验收始终为 `not_run`。可用参数见 M0 验证记录。它不是任务书中的正式 `check` 接口。
 
-开发工具链为 Go 1.27.1。本地测试：`go test ./...`；静态检查：`go vet ./...`。测试只启动有时间上限的测试子进程，不启动 Dota。已获授权在 M0 完成后创建公开仓库 `L4C99/dota2-arcade-dedicated-core`，暂不添加许可证；尚未推送或发布。
+开发工具链为 Go 1.27.1。本地测试：`go test ./...`；静态检查：`go vet ./...`。测试只启动有时间上限的测试子进程，不启动 Dota。代码已推送至公开仓库 [L4C99/dota2-arcade-dedicated-core](https://github.com/L4C99/dota2-arcade-dedicated-core)，按用户要求暂不添加许可证，尚未发布产品版本。
+
+[首次双平台 CI](https://github.com/L4C99/dota2-arcade-dedicated-core/actions/runs/35335806449) 已通过 test/vet/build；真实 Dota 验收另见 M0 记录。凭据及推送方式见 [GitHub 约定](docs/github.md)。
 
 游戏资源、VPK、实际运行配置、凭据和原始敏感日志不上传 GitHub。
 

@@ -11,3 +11,9 @@ SSH 使用项目专用配置和 known_hosts，严格验证主机密钥；主机�
 日常代码同步使用普通 git push，不强制推送。Deploy key 必须勾选 Allow write access 才能推送；只读 key 可以通过 SSH 身份验证，但 push 会被拒绝。仓库推送和 CI 结果单独记录，CI 通过不代替真实 Dota 实机验收。
 
 如需在其他机器工作，应单独配置凭据，不从仓库获取或分发本机私钥。没有提供许可证、游戏文件或第三方地图内容。
+
+## 2026-09-18 首次上传
+
+用户在网页建立公开空仓库，许可证为空。SSH 验证明确返回本仓库身份；第一次 push 因 Deploy key 为只读而拒绝，未上传。用户重新添加可写 key 后正常推送成功，本地和远端 main 均为 8f9ddb76e30f43f610e5986cd1a6595355c047fe。
+
+该代码提交的 [GitHub Actions](https://github.com/L4C99/dota2-arcade-dedicated-core/actions/runs/35335806449) 已完成且 success，Windows/Linux 均通过 go test、go vet、go build。最后一次同步仅更新发布状态文档，不改代码；使用 skip ci 避免对相同代码重复运行。没有创建产品 release，也没有推进 M1。
