@@ -38,7 +38,7 @@
 - Python Linux 探针已运行真实引擎。身份采用 boot ID、启动 ticks、可执行路径、完整参数、项目 cgroup，并在操作前打开 pidfd，信号通过 pidfd 发送。
 - 初次隔离探针执行通过，但采集脚本末尾 stat 因 Windows 管道末尾 CR 失败；后续单独只读 stat 已通过。未掩盖初次非零退出。
 - `iptables -t nat -S` 返回无该表/链，不能据此宣称没有云端 NAT；公网映射以用户面板信息为准。
-- 已启动本项目 Ubuntu 引擎，客户端进房仍待验收；M0 未完成。
+- 本项目 Ubuntu 引擎两次真实进房、重开、停止及故障验证已完成；最终结论见 [M0 验收](m0-results.md)。
 
 ## 真实引擎实验（2026-09-18，时间 UTC）
 
@@ -47,8 +47,17 @@
 | run01 | 失败：私有 cfg 遮住引擎自带 user_keys_default 配置，主进程 signal 11。保留失败日志，不能算地图加载通过 |
 | run02 | 复制 10 个明确的引擎默认 .vcfg 到私有目录后可启动；addon 目录中放 pak01.vpk 未成功挂载 n7。FIFO quit 实测 177 ms 退出，systemd Result=success/MainPID=0 |
 | run03 | 本地 VPK 顺序解包，5131 文件、481770493 字节、每文件 CRC 通过。n7 ss_active，但 addon_game_mode 主脚本失败，不能算地图就绪。quit 实测 502 ms 退出 |
-| run04 | 使用原始 VPK 绝对路径，10:02:15 ss_active，10:02:16 地图 StandaloneServer command-ready，10:02:25 VAC secure。等待实际客户端进房 |
+| run04 | 使用原始 VPK 绝对路径，服务端脚本与 VAC 就绪；Windows 客户端收到 Linux 绝对路径后报路径警告并因重复技能 ID 崩溃，未 FULL，不能算进房通过 |
+| run05 | 改为两端唯一同名原始 VPK，10:08:07 FULL 且用户确认进入；错误 boot ID 的 quit 被拒绝，恢复记录后正常 quit 553 ms |
+| run06 | 同配置重开；启动工具在保存进程身份前 Exit(73)，引擎继续启动；重开探针核验身份后 10:10:03 FULL 且用户确认；quit 556 ms，cgroup 空 |
+| run07 | 注入不可写日志，引擎仍存活但无引擎日志；暂停目标进程后 quit 10 秒明确超时，再 pidfd 强杀，确认 signal 9 / cgroup 空 |
+| run08/run10 | 中文空格/纯中文日志目录可写，但引擎没有生成日志；失败如实保留 |
+| run09 | ASCII 空格日志正常，无效地图的加载失败与 Idle 有明确日志；正常退出 |
+| run11 | 修正探针后以实际引擎用户预开不可写日志，明确拒绝，未 exec 引擎 |
+| run12 | 最终修订探针正常加载原始 VPK，脚本/VAC 就绪；采集全部 TCP/UDP、无直接子进程；quit 496 ms，归属套接字消失 |
 
 解包实验仅发生在本项目 addons 目录，未复制云端现用地图，也未修补地图代码。直接 VPK 与解包加载表现不同，现有证据不能确定主脚本失败的具体原因。run04 使用原始 VPK，保持用户提供资源字节不变。
 
 从 run02 起设置 LimitCORE=0；没有更改主机 core 策略。默认 .vcfg 文件名单和哈希保存在私有 default-cfg-snapshot.json；未复制生产房间 cfg 或 autoexec。run04 观测到游戏端口同时使用 UDP/TCP，以及额外的回环 TCP 临时监听；公网目前仅确认 UDP 映射。
+
+所有测试单元最终 MainPID=0；失败单元保留 failed 状态作为诊断，不通过 reset-failed 掩盖。私有生成 cfg 按归属与归档内容一致性清理，FIFO 在单元退出后清理；原始 VPK、默认配置副本和运行证据保留。测试端口无绑定，证据打包下载到本机忽略目录；线上服务未停止、未重配。
