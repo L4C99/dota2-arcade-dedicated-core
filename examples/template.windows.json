@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "draft-2",
+  "name": "n7",
+  "executable": "E:\\SteamLibrary\\steamapps\\common\\dota 2 beta\\game\\bin\\win64\\dota2.exe",
+  "workingDirectory": "E:\\SteamLibrary\\steamapps\\common\\dota 2 beta\\game",
+  "arguments": [
+    "-dedicated",
+    "-allow_no_lobby_connect",
+    "-ip",
+    "0.0.0.0",
+    "-port",
+    "{{game_port}}",
+    "-con_logfile",
+    "{{log_path}}",
+    "+exec",
+    "{{cfg_name}}"
+  ],
+  "cfg": {
+    "directory": "E:/SteamLibrary/steamapps/common/dota 2 beta/game/dota/cfg",
+    "lines": [
+      "hostname \"{{instance_id}}\"",
+      "map n7 gamemode=15 customgamemode=\"E:/SteamLibrary/steamapps/workshop/content/570/3564393242/3564393242.vpk\" nomapvalidation=1",
+      "sv_hibernate_when_empty 0"
+    ]
+  }
+}

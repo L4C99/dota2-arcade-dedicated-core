@@ -1,0 +1,9 @@
+/data/
+/local/
+/dist/
+/build/
+*.log
+*.vpk
+*.exe
+*.test
+.DS_Store
