@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"d2core.local/core/internal/m0"
+	"github.com/L4C99/dota2-arcade-dedicated-core/internal/m0"
 )
 
 func main() {
