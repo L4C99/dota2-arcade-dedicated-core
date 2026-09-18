@@ -1,3 +1,4 @@
+#requires -Version 7.0
 # M0 experiment only; not a production manager. Configuration and evidence stay local.
 [CmdletBinding()]
 param(
