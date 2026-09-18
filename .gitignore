@@ -9,3 +9,6 @@
 .DS_Store
 __pycache__/
 *.pyc
+
+# Full local development handoff; public roadmap lives in docs/.
+/任务计划书.md
