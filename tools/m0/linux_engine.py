@@ -73,6 +73,11 @@ def main():
     if not re.fullmatch(r'[a-zA-Z0-9_]+', config['map']):
         raise RuntimeError('Invalid map')
     fifo = run / 'stdin.fifo'
+    log_path = Path(config.get('logPath', str(run / 'engine.log'))).resolve()
+    if run not in log_path.parents:
+        raise RuntimeError('Log must remain inside the owned run directory')
+    if opts.action in ('launch', 'exec') and not str(log_path).isascii():
+        raise RuntimeError('Engine log path must use ASCII characters; no fallback directory is selected')
     if opts.action == 'launch':
         if os.geteuid() != 0:
             raise RuntimeError('Isolated M0 unit launch requires the authorized root session')
@@ -117,13 +122,16 @@ def main():
     if opts.action == 'exec':
         if config['addon'] not in ('3564393242', 'd2core_m0_3564393242.vpk', str(ROOT / 'assets/3564393242.vpk')):
             raise RuntimeError('Only the user-provided M0 addon is allowed')
+        # This code runs as the actual engine user, not the root launcher.
+        with log_path.open('x', encoding='utf-8'):
+            pass
         cfg_name = config['runId'] + '.cfg'
         cfg = (f'hostname "{config["runId"]}"\n'
                f'map {config["map"]} gamemode=15 customgamemode="{config["addon"]}" nomapvalidation=1\n'
                'sv_hibernate_when_empty 0\n')
         args = [config['executable'], '-dedicated', '-allow_no_lobby_connect',
                 '-ip', '0.0.0.0', '-port', str(config['port']),
-                '-con_logfile', str(run / 'engine.log'), '+exec', cfg_name]
+                '-con_logfile', str(log_path), '+exec', cfg_name]
         save(run / 'intent.json', {'at': time.time(), 'arguments': args, 'cfg': cfg})
         for path in [run / 'startup.cfg', ROOT / 'engine-cfg' / cfg_name]:
             with path.open('x', encoding='utf-8') as out:
@@ -158,8 +166,8 @@ def main():
         validate_owned(actual, config)
         if opts.action == 'observe':
             print(json.dumps({'at': time.time(), 'identity': actual,
-                              'logBytes': (run / 'engine.log').stat().st_size
-                              if (run / 'engine.log').exists() else 0}))
+                              'logBytes': log_path.stat().st_size
+                              if log_path.exists() else 0}))
             return
         started = time.monotonic()
         if opts.action == 'quit':

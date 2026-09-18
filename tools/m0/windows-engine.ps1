@@ -22,10 +22,24 @@ $cfgPath = Join-Path $config.cfgDirectory ($config.runId + '.cfg')
 $logPath = Join-Path $runRoot 'engine.log'
 
 if ($Action -eq 'launch') {
+    if ($logPath -match '[^\x00-\x7F]') { throw 'Engine log path must use ASCII characters; no fallback directory is selected' }
     # An interrupted launch requires investigation, never blindly run again.
     if (Test-Path -LiteralPath (Join-Path $runRoot 'intent.json')) { throw 'Existing launch intent: inspect possible process; use a new run only after resolving it' }
     if (Test-Path -LiteralPath $cfgPath) { throw 'Refusing to overwrite existing engine cfg' }
     if (Test-Path -LiteralPath $logPath) { throw 'Refusing to reuse engine log' }
+    # Short-lived exclusive reservations detect current conflicts, not future races.
+    $udpProbe = [Net.Sockets.Socket]::new([Net.Sockets.AddressFamily]::InterNetworkV6, [Net.Sockets.SocketType]::Dgram, [Net.Sockets.ProtocolType]::Udp)
+    $tcpProbe = [Net.Sockets.Socket]::new([Net.Sockets.AddressFamily]::InterNetworkV6, [Net.Sockets.SocketType]::Stream, [Net.Sockets.ProtocolType]::Tcp)
+    try {
+        foreach ($socket in @($udpProbe, $tcpProbe)) {
+            $socket.DualMode = $true
+            $socket.ExclusiveAddressUse = $true
+            $socket.Bind([Net.IPEndPoint]::new([Net.IPAddress]::IPv6Any, [int]$config.port))
+        }
+    } finally { $udpProbe.Dispose(); $tcpProbe.Dispose() }
+    # Confirm writable log output before creating a process; leave the owned file.
+    $logProbe = [IO.File]::Open($logPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::ReadWrite)
+    $logProbe.Dispose()
     $vpkEnginePath = $config.vpk.Replace('\', '/')
     if ($vpkEnginePath -match '["\r\n]') { throw 'Unsupported cfg path characters' }
     $cfg = "hostname `"$($config.runId)`"`nmap $($config.map) gamemode=15 customgamemode=`"$vpkEnginePath`" nomapvalidation=1`nsv_hibernate_when_empty 0`n"
