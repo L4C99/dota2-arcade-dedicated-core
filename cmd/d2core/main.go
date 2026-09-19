@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/L4C99/dota2-arcade-dedicated-core/internal/a2s"
+
 	"github.com/L4C99/dota2-arcade-dedicated-core/internal/config"
 	"github.com/L4C99/dota2-arcade-dedicated-core/internal/core"
 	"github.com/L4C99/dota2-arcade-dedicated-core/internal/engine"
@@ -44,6 +46,29 @@ func run(args []string) error {
 		return usage("usage: d2core check --template ABS [--json] | version [--json] | m0-inspect [resource options]")
 	}
 	switch args[0] {
+	case "a2s":
+		if len(args) < 2 || args[1] != "enable" {
+			return usage("a2s enable --dota-dir ABS [--json]")
+		}
+		f := flag.NewFlagSet("a2s enable", flag.ContinueOnError)
+		dir := f.String("dota-dir", "", "absolute Dota installation root")
+		f.Bool("json", false, "structured output")
+		if err := f.Parse(args[2:]); err != nil {
+			return usageError{err}
+		}
+		if *dir == "" || f.NArg() != 0 {
+			return usage("a2s enable requires --dota-dir ABS")
+		}
+		result, err := a2s.Enable(*dir)
+		if err != nil {
+			code := "IO_ERROR"
+			if result.Status == "conflict" {
+				code = "CONFIG_CONFLICT"
+			}
+			_ = writeResult(result, map[string]string{"code": code, "stage": "configure", "message": err.Error()})
+			return err
+		}
+		return writeResult(result, nil)
 	case "serve", "create", "list", "status", "operation", "logs", "restart", "stop":
 		return manage(args[0], args[1:])
 	case "__engine-quit":
@@ -233,6 +258,9 @@ func writeResult(result any, failure any) error {
 	v := map[string]any{"protocolVersion": 1, "ok": failure == nil}
 	if failure != nil {
 		v["error"] = failure
+		if result != nil {
+			v["result"] = result
+		}
 	} else {
 		v["result"] = result
 	}
