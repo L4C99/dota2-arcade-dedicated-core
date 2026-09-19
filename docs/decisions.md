@@ -2,7 +2,7 @@
 
 ## 工具链与实现边界
 
-开发工具链为 Go 1.27.1，当前 Go 工具无第三方依赖。PowerShell/Python 用于 M0 实验，不是最终使用者的安装前提。M1 需将验证过的平台机制实现为 Go 适配并重新验收。
+开发工具链为 Go 1.27.1。Windows 本地管道采用微软官方 [go-winio v0.6.2](https://github.com/microsoft/go-winio/releases/tag/v0.6.2)，系统 API 使用 golang.org/x/sys v0.10.0；版本及校验和锁定在 go.mod/go.sum。避免自行实现易出错的重叠 IO 取消与 deadline；已核对库源码设置 FILE_PIPE_REJECT_REMOTE_CLIENTS，并执行真实匿名令牌拒绝测试。PowerShell/Python 仅用于开发与隔离验收，不是最终使用者的安装前提。
 
 `m0-inspect` 只读取显式路径、解析链接并计算指纹，不启动引擎，也不验证写权限、资源冻结或任意 cfg 引用。静态检查成功不代表地图可加载。
 
@@ -37,3 +37,7 @@ Ubuntu 实验使用独立 systemd 单元和私有挂载隔离共享安装。这�
 记录集中保存在 data-dir/state.json；每代另存日志及生成 cfg 副本。写临时文件并同步后替换，完整故障窗口与磁盘持久化保证在 M2 验收。清理只删除路径、归属和内容指纹均匹配的生成 cfg，不递归删除资源。清理失败保持待处理记录，重试不能派生进程。
 
 Windows 端口预检显式设置 SO_EXCLUSIVEADDRUSE：普通通配监听无法可靠拒绝已有回环监听，已由实际失败测试确认。检查同时覆盖 TCP/UDP 和 IPv4/IPv6，仍不构成 OS 端口长期预约。
+
+整个 data-dir 及 manager 子目录都要求同用户私有权限，避免绕过 IPC 改写状态。Windows 核验当前用户所有者及受保护继承 DACL；Linux 核验 owner 与0700。只为新目录创建权限，已有不安全目录拒绝且保持原权限。管理端关闭先停止接收、等待后台操作停止写入，再释放 data-dir 锁；专服不因管理端退出而被终止。
+
+首次持久化错误后拒绝新变更及后续保存，查询暴露 IO_ERROR/persist，不能把未保存的回收或操作报告成成功。完整恢复与磁盘故障流程在 M2/M3 验收。停止期间已完成的输入文件清理单独记账，不对已清理的旧代次重新操作其可能被复用的 PID。

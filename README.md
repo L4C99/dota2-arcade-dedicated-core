@@ -6,7 +6,7 @@
 
 M0 双平台运行验证已完成，包括真实客户端进房、停止与重开、进程身份核验和启动工具中断后的日志行为。这些是实验结果，不代表管理功能已实现。
 
-M1 正在开发。当前提供离线 `check --template ABS --json`、`version --json`，以及 M0 只读资源检查 `m0-inspect`。模板 v1 的静态校验和安全展开已通过 Windows/Linux 原生测试；创建、停止、重启及本地管理服务尚不可用。
+M1 正在验收准备。已实现离线 `check`、`version`、本地 `serve`，以及 `create/list/status/operation/logs/restart/stop`。模板、原生进程适配、受限本地协议和辅助进程闭环已通过双平台原生测试；真实 Dota 闭环尚未验收，不能用于正式接管线上房间。M0 的只读资源检查 `m0-inspect` 保留。
 
 ## 构建与检查
 
@@ -27,6 +27,7 @@ go run ./cmd/d2core m0-inspect
 - [技术决策](docs/decisions.md)：实现约束与后续验证责任。
 - [M0 验证报告](docs/validation/m0.md)：环境、结果、限制和复验流程。
 - [本地协议](docs/local-api.md)：M1 契约，接口可用性以阶段记录为准。
+- [操作说明](docs/operations.md)：当前实验版本的本地调用与权限要求。
 - [M1 进度与验收](docs/validation/m1.md)：实现、自动验证和真实进房分开记录。
 - [配置示例说明](examples/README.md)：模板 v1、双平台路径和就绪规则填写说明。
 - [M0 实验工具](tools/m0/README.md)：只读采集及 Windows 进程探针。
