@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 func TestMain(m *testing.M) {
@@ -71,14 +72,24 @@ func TestEngineChild(t *testing.T) {
 		fmt.Fprintln(os.Stdout, "bindings ready")
 	}
 	if mode == "console" {
-		ok, _, err := kernel.NewProc("AllocConsole").Call()
-		if ok == 0 {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(32)
+		var attached [16]uint32
+		count, _, _ := consoleProcesses.Call(uintptr(unsafe.Pointer(&attached[0])), uintptr(len(attached)))
+		if count == 0 {
+			ok, _, err := kernel.NewProc("AllocConsole").Call()
+			if ok == 0 {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(32)
+			}
 		}
-		name, _ := syscall.UTF16PtrFromString("CONIN$")
-		h, err := syscall.CreateFile(name, 0x80000000, 3, nil, 3, 0, 0)
+		// Match the engine's use of inherited standard input. Opening CONIN$
+		// here hid the NUL handle that os/exec supplies for a nil Stdin.
+		h, err := syscall.GetStdHandle(syscall.STD_INPUT_HANDLE)
 		if err != nil {
+			os.Exit(33)
+		}
+		var mode uint32
+		if err := syscall.GetConsoleMode(h, &mode); err != nil {
+			fmt.Fprintln(os.Stderr, "standard input is not a console:", err)
 			os.Exit(33)
 		}
 		f := os.NewFile(uintptr(h), "console input")
@@ -86,6 +97,7 @@ func TestEngineChild(t *testing.T) {
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			if strings.TrimSpace(scanner.Text()) == "quit" {
+				fmt.Fprintln(os.Stdout, "graceful quit received")
 				return
 			}
 		}
@@ -264,5 +276,8 @@ func TestConsoleQuit(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join(id.RunDirectory, "output.log"))
 	if err != nil || !strings.Contains(string(b), "中文") {
 		t.Fatalf("direct output missing: %q %v", b, err)
+	}
+	if !strings.Contains(string(b), "graceful quit received") {
+		t.Fatalf("child exited without receiving quit through standard input: %s", b)
 	}
 }

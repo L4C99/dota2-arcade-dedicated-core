@@ -60,6 +60,15 @@ func Start(spec Spec) (Identity, error) {
 	defer output.Close()
 	cmd := exec.Command(executable, spec.Arguments...)
 	cmd.Dir = spec.WorkingDirectory
+	// A nil os/exec Stdin is an inherited NUL file, which prevents AllocConsole
+	// from installing the engine's console input handle. Pass a NULL handle:
+	// Windows can initialize it when the dedicated engine allocates its console.
+	// stdout/stderr still go directly to the owned file while the manager is offline.
+	nullInput := os.NewFile(0, "NULL standard input")
+	// Closing this wrapper only attempts CloseHandle(0); it cannot close a
+	// parent's input or the console handle later installed in the child.
+	defer nullInput.Close()
+	cmd.Stdin = nullInput
 	cmd.Stdout = output
 	cmd.Stderr = output
 	// The dedicated engine allocates its own console, as in the M0 probe.
