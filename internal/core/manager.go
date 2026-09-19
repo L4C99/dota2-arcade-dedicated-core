@@ -466,7 +466,24 @@ func (m *Manager) observe(in *records.Instance, r *records.Run, o *engine.Observ
 	}
 	r.Evidence = obs.Evidence
 	bindings, err := h.Bindings()
+	// The process can exit while its log or native socket tables are read.
+	// Recheck the same verified handle before classifying a /proc error or
+	// promoting readiness; a successful earlier Open is not a liveness lease.
+	alive, identityErr := h.Alive()
+	if errors.Is(err, engine.ErrGone) || (identityErr == nil && !alive) {
+		in.Process = "stopped"
+		in.Room = "failed"
+		r.Evidence.Valid = false
+		return false, fail("START_FAILED", "observe", "process exited")
+	}
+	if identityErr != nil {
+		in.Process = "unknown"
+		in.Room = "unknown"
+		r.Evidence.Valid = false
+		return false, fail("IDENTITY_UNVERIFIED", "observe", identityErr.Error())
+	}
 	if err != nil {
+		r.Evidence.Valid = false
 		return false, classify(err, "observe")
 	}
 	r.Bindings = bindings
