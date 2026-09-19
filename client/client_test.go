@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -11,7 +12,13 @@ import (
 )
 
 func TestPublicClientUsesLocalTransport(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "data")
+	// Unix socket paths include the endpoint name; keep the test directory short.
+	base, e := os.MkdirTemp("", "d2client-")
+	if e != nil {
+		t.Fatal(e)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(base) })
+	dir := filepath.Join(base, "data")
 	s, e := localipc.Listen(dir)
 	if e != nil {
 		t.Fatal(e)
