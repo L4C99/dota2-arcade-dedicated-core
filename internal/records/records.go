@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/L4C99/dota2-arcade-dedicated-core/internal/config"
+	"github.com/L4C99/dota2-arcade-dedicated-core/internal/engine"
 )
 
 const FormatVersion = 1
@@ -33,16 +34,21 @@ type Failure struct {
 func (e *Failure) Error() string { return e.Code + ": " + e.Message }
 
 type Run struct {
-	Generation int       `json:"generation"`
-	Directory  string    `json:"directory"`
-	LogPath    string    `json:"logPath"`
-	CFGPath    string    `json:"cfgPath"`
-	CFGDigest  string    `json:"cfgDigest"`
-	Arguments  []string  `json:"arguments"`
-	CreatedAt  time.Time `json:"createdAt"`
-	Prepared   bool      `json:"prepared"`
-	CFGCreated bool      `json:"cfgCreated"`
-	CFGRemoved bool      `json:"cfgRemoved"`
+	Generation   int                `json:"generation"`
+	Directory    string             `json:"directory"`
+	LogPath      string             `json:"logPath"`
+	CFGPath      string             `json:"cfgPath"`
+	CFGDigest    string             `json:"cfgDigest"`
+	Arguments    []string           `json:"arguments"`
+	CreatedAt    time.Time          `json:"createdAt"`
+	Prepared     bool               `json:"prepared"`
+	CFGCreated   bool               `json:"cfgCreated"`
+	CFGRemoved   bool               `json:"cfgRemoved"`
+	InputRemoved bool               `json:"inputRemoved"`
+	Identity     *engine.Identity   `json:"identity"`
+	Evidence     *engine.Evidence   `json:"evidence"`
+	Bindings     []engine.Binding   `json:"bindings"`
+	StopResult   *engine.StopResult `json:"stopResult"`
 }
 type Instance struct {
 	ID                 string          `json:"instanceId"`
