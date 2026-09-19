@@ -33,6 +33,8 @@ go run ./cmd/d2core m0-inspect
 - [M1 进度与验收](docs/validation/m1.md)：实现、自动验证和真实进房分开记录。
 - [M2 进度与验收](docs/validation/m2.md)：恢复、持久化和整机重启验收状态。
 - [M3 进度与验收](docs/validation/m3.md)：多实例、自动端口和存储策略。
+- [M4交付进度](docs/validation/m4.md)、[构建包说明](docs/delivery.md)：开发包与待验收项。
+- [A2S独立配置工具](docs/a2s.md)、[外部调用示例](examples/launcher/README.md)。
 - [配置示例说明](examples/README.md)：模板 v1、双平台路径和就绪规则填写说明。
 - [M0 实验工具](tools/m0/README.md)：只读采集及 Windows 进程探针。
 
@@ -43,4 +45,5 @@ go run ./cmd/d2core m0-inspect
 - 已验证的地图与平台组合不代表任意地图兼容。资源准备和更新由使用者或上层程序负责。
 
 仓库不包含游戏安装、地图包、凭据或原始玩家日志。当前未提供许可证，也未发布正式产品版本。
+
 

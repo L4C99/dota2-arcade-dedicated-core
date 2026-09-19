@@ -108,9 +108,13 @@ func run(args []string) error {
 		}
 		v := map[string]any{"version": "0.1.0-dev", "gitCommit": "unknown", "buildTime": buildTime, "schemaVersion": 1, "formatVersion": records.FormatVersion, "protocolVersion": 1}
 		if info, ok := debug.ReadBuildInfo(); ok {
+			v["goVersion"] = info.GoVersion
 			for _, s := range info.Settings {
 				if s.Key == "vcs.revision" {
 					v["gitCommit"] = s.Value
+				}
+				if s.Key == "vcs.modified" {
+					v["gitDirty"] = s.Value == "true"
 				}
 			}
 		}
