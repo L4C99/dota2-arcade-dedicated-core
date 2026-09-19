@@ -186,7 +186,8 @@ func (s *Store) validateState() error {
 			return fmt.Errorf("orphaned or mismatched idempotency record")
 		}
 		fp, e := Fingerprint(in.TemplatePath, in.Port)
-		if e != nil || key.Fingerprint != fp {
+		autoFP, _ := Fingerprint(in.TemplatePath, 0)
+		if e != nil || (key.Fingerprint != fp && key.Fingerprint != autoFP) {
 			return fmt.Errorf("idempotency fingerprint mismatch")
 		}
 		keysByInstance[in.ID]++

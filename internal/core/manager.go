@@ -30,6 +30,7 @@ type Manager struct {
 	isClosed   bool
 	writeError error
 	persist    func() error
+	ports      records.PortRange
 }
 type request struct {
 	ProtocolVersion int             `json:"protocolVersion"`
@@ -46,11 +47,18 @@ type response struct {
 // Open requires an already-held localipc data-directory lock. Existing runs
 // are identity-checked before observation; ambiguous intent is never respawned.
 func Open(dir string) (*Manager, error) {
+	return OpenWithPorts(dir, records.DefaultPortRange())
+}
+
+func OpenWithPorts(dir string, ports records.PortRange) (*Manager, error) {
+	if err := ports.Validate(); err != nil {
+		return nil, err
+	}
 	s, err := records.Open(dir)
 	if err != nil {
 		return nil, err
 	}
-	m := &Manager{store: s, workers: map[string]*worker{}, closed: make(chan struct{}), persist: s.Save}
+	m := &Manager{store: s, workers: map[string]*worker{}, closed: make(chan struct{}), persist: s.Save, ports: ports}
 	if err = m.recover(); err != nil {
 		return nil, err
 	}
@@ -161,7 +169,7 @@ func (m *Manager) dispatch(req request) (any, *records.Failure) {
 		if m.writeError != nil {
 			return nil, classify(m.writeError, "persist")
 		}
-		in, op, err := m.store.Create(p.Template, p.Port, p.Key)
+		in, op, err := m.store.CreateInRange(p.Template, p.Port, p.Key, m.ports)
 		if err != nil {
 			var uncertain *records.DurabilityError
 			if errors.As(err, &uncertain) {

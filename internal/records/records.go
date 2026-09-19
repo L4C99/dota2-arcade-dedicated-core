@@ -301,6 +301,10 @@ func ValidateKey(key string) error {
 // Create persists the fully normalized snapshot and reservation before any run
 // files or processes exist. Retry lookup happens before rereading the template.
 func (s *Store) Create(path string, port int, key string) (*Instance, *Operation, error) {
+	return s.CreateInRange(path, port, key, DefaultPortRange())
+}
+
+func (s *Store) CreateInRange(path string, port int, key string, ports PortRange) (*Instance, *Operation, error) {
 	if err := ValidateKey(key); err != nil {
 		return nil, nil, &Failure{Code: "INVALID_REQUEST", Stage: "validate", Message: err.Error()}
 	}
@@ -318,12 +322,10 @@ func (s *Store) Create(path string, port int, key string) (*Instance, *Operation
 	if err != nil {
 		return nil, nil, err
 	}
-	for _, in := range s.State.Instances {
-		if in.Lifecycle != "reclaimed" && in.Port == port {
-			return nil, nil, &Failure{Code: "PORT_IN_USE", Stage: "validate", Message: "port reserved by " + in.ID}
-		}
-	}
-	if err = CheckPort(port); err != nil {
+	// Fingerprint retains requested port 0 for automatic intent; the selected
+	// port is saved on the instance and never reselected on a retry.
+	port, err = s.allocatePort(port, ports)
+	if err != nil {
 		return nil, nil, err
 	}
 	id, err := ID("i")
