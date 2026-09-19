@@ -235,11 +235,14 @@ func safeText(s string) bool { return utf8.ValidString(s) && !strings.ContainsAn
 func plain(s string) bool {
 	return safeText(s) && !strings.Contains(s, "{{") && !strings.Contains(s, "}}")
 }
-func pathCheck(field, path string, dir bool) (string, error) {
+func pathCheck(field, path string, dir, checkExistence bool) (string, error) {
 	if !plain(path) || !filepath.IsAbs(path) {
 		return "", &Error{"INVALID_PATH", field, "literal absolute path required"}
 	}
 	path = filepath.Clean(path)
+	if !checkExistence {
+		return path, nil
+	}
 	st, err := os.Stat(path)
 	if err != nil {
 		return "", &Error{"INVALID_PATH", field, err.Error()}
@@ -253,6 +256,10 @@ func pathCheck(field, path string, dir bool) (string, error) {
 // Validate returns a normalized independent copy. It only stats input paths;
 // writability, resources referenced by arbitrary cfg, and ports are not tested.
 func Validate(t Template) (Template, error) {
+	return validate(t, true)
+}
+
+func validate(t Template, checkExistence bool) (Template, error) {
 	if t.SchemaVersion != SchemaVersion {
 		return Template{}, &Error{"UNSUPPORTED_VERSION", "schemaVersion", "expected 1"}
 	}
@@ -260,13 +267,13 @@ func Validate(t Template) (Template, error) {
 		return Template{}, invalid("name", "nonempty literal single-line name required")
 	}
 	var err error
-	if t.Executable, err = pathCheck("executable", t.Executable, false); err != nil {
+	if t.Executable, err = pathCheck("executable", t.Executable, false, checkExistence); err != nil {
 		return Template{}, err
 	}
-	if t.WorkingDirectory, err = pathCheck("workingDirectory", t.WorkingDirectory, true); err != nil {
+	if t.WorkingDirectory, err = pathCheck("workingDirectory", t.WorkingDirectory, true, checkExistence); err != nil {
 		return Template{}, err
 	}
-	if t.CFG.Directory, err = pathCheck("cfg.directory", t.CFG.Directory, true); err != nil {
+	if t.CFG.Directory, err = pathCheck("cfg.directory", t.CFG.Directory, true, checkExistence); err != nil {
 		return Template{}, err
 	}
 	t.Arguments = append([]string(nil), t.Arguments...)
@@ -381,7 +388,16 @@ func token(s string) bool {
 }
 
 func Expand(t Template, v Values) (Expanded, error) {
-	t, err := Validate(t)
+	return expand(t, v, true)
+}
+
+// ExpandSnapshot validates syntax and expands stored configuration without
+// requiring historical source templates, executables or directories to exist.
+// Starting a new process must still use Expand and runtime preflight.
+func ExpandSnapshot(t Template, v Values) (Expanded, error) { return expand(t, v, false) }
+
+func expand(t Template, v Values, checkExistence bool) (Expanded, error) {
+	t, err := validate(t, checkExistence)
 	if err != nil {
 		return Expanded{}, err
 	}

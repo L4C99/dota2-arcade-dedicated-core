@@ -51,41 +51,7 @@ func Open(dir string) (*Manager, error) {
 		return nil, err
 	}
 	m := &Manager{store: s, workers: map[string]*worker{}, closed: make(chan struct{}), persist: s.Save}
-	for _, in := range s.State.Instances {
-		if in.Lifecycle == "reclaimed" {
-			continue
-		}
-		if len(in.Runs) == 0 {
-			in.Process = "stopped"
-			in.Room = "unknown"
-			in.Lifecycle = "failed"
-			continue
-		}
-		r := in.Runs[len(in.Runs)-1]
-		if r.Identity == nil {
-			in.Process = "unknown"
-			in.Room = "unknown"
-			in.Lifecycle = "failed"
-			continue
-		}
-		h, e := engine.Open(*r.Identity)
-		if errors.Is(e, engine.ErrGone) {
-			in.Process = "stopped"
-			in.Room = "failed"
-			in.Lifecycle = "failed"
-			continue
-		}
-		if e != nil {
-			in.Process = "unknown"
-			in.Room = "unknown"
-			in.Lifecycle = "failed"
-			continue
-		}
-		h.Close()
-		in.Process = "running"
-		in.Room = "loading"
-	}
-	if err = m.save(); err != nil {
+	if err = m.recover(); err != nil {
 		return nil, err
 	}
 	m.wg.Add(1)
@@ -121,6 +87,7 @@ func (m *Manager) failedSave(in *records.Instance, w *worker, err error) {
 	in.UpdatedAt = time.Now().UTC()
 	op := m.store.State.Operations[w.operationID]
 	op.Status = "failed"
+	op.Phase = "done"
 	op.Error = f
 	now := time.Now().UTC()
 	op.FinishedAt = &now
@@ -196,6 +163,12 @@ func (m *Manager) dispatch(req request) (any, *records.Failure) {
 		}
 		in, op, err := m.store.Create(p.Template, p.Port, p.Key)
 		if err != nil {
+			var uncertain *records.DurabilityError
+			if errors.As(err, &uncertain) {
+				// Publication may already be durable. Preserve its IDs and stop
+				// accepting mutations until disk state is reloaded explicitly.
+				m.writeError = err
+			}
 			return nil, classify(err, "validate")
 		}
 		// A retry returns exactly the original IDs, including historical results.
@@ -326,6 +299,7 @@ func (m *Manager) finish(in *records.Instance, w *worker, status string, e *reco
 	}
 	now := time.Now().UTC()
 	op.Status = status
+	op.Phase = "done"
 	op.FinishedAt = &now
 	op.Error = e
 	in.UpdatedAt = now
@@ -355,6 +329,13 @@ func (m *Manager) launch(id string, w *worker) {
 		m.mu.Unlock()
 		return
 	}
+	op := m.store.State.Operations[w.operationID]
+	op.Phase = "preparing"
+	if err := m.save(); err != nil {
+		m.failedSave(in, w, err)
+		m.mu.Unlock()
+		return
+	}
 	r, err := m.store.PrepareRun(in)
 	if err != nil {
 		m.finish(in, w, "failed", classify(err, "persist"))
@@ -369,6 +350,14 @@ func (m *Manager) launch(id string, w *worker) {
 	}
 	// Holding the mutex through Start makes stop's cancellation and spawning a
 	// single ordering boundary. There is no launch after stop acknowledges.
+	r.SpawnAttempted = true
+	r.StartupDeadline = time.Now().UTC().Add(time.Duration(in.Snapshot.Timeouts.StartupSeconds) * time.Second)
+	op.Phase = "spawning"
+	if err = m.save(); err != nil {
+		m.failedSave(in, w, err)
+		m.mu.Unlock()
+		return
+	}
 	identity, err := engine.Start(engine.Spec{Executable: in.Snapshot.Executable, WorkingDirectory: in.Snapshot.WorkingDirectory, Arguments: r.Arguments, RunDirectory: r.Directory})
 	if identity.PID > 0 {
 		r.Identity = &identity
@@ -382,14 +371,20 @@ func (m *Manager) launch(id string, w *worker) {
 	in.Process = "running"
 	in.Room = "loading"
 	in.Error = nil
+	op.Phase = "observing"
 	if err = m.save(); err != nil {
 		m.failedSave(in, w, err)
 		m.mu.Unlock()
 		return
 	}
-	observer := engine.NewObserver(r.Generation, r.LogPath, in.Snapshot.Readiness)
-	deadline := time.Now().Add(time.Duration(in.Snapshot.Timeouts.StartupSeconds) * time.Second)
 	m.mu.Unlock()
+	m.awaitReadiness(in, r, w)
+}
+
+func (m *Manager) awaitReadiness(in *records.Instance, r *records.Run, w *worker) {
+	observer := engine.NewObserver(r.Generation, r.LogPath, in.Snapshot.Readiness)
+	identity := *r.Identity
+	deadline := r.StartupDeadline
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -404,7 +399,7 @@ func (m *Manager) launch(id string, w *worker) {
 			m.mu.Unlock()
 			return
 		}
-		if ready {
+		if ready && !time.Now().After(deadline) {
 			m.finish(in, w, "succeeded", nil)
 			m.mu.Unlock()
 			return
@@ -538,7 +533,7 @@ func (m *Manager) change(in *records.Instance, kind string) (any, *records.Failu
 	if err != nil {
 		return nil, classify(err, "persist")
 	}
-	op := &records.Operation{ID: id, Kind: kind, InstanceID: in.ID, Generation: in.Generation, Status: "running", CreatedAt: time.Now().UTC()}
+	op := &records.Operation{ID: id, Kind: kind, InstanceID: in.ID, Generation: in.Generation, Status: "running", Phase: "accepted", CreatedAt: time.Now().UTC()}
 	m.store.State.Operations[id] = op
 	in.CurrentOperationID = id
 	if old != nil && !cancelled(old) {
@@ -577,6 +572,12 @@ func (m *Manager) stopOrRestart(id string, w, old *worker) {
 		r = in.Runs[len(in.Runs)-1]
 	}
 	if r != nil && r.Identity != nil && in.Process != "stopped" {
+		m.store.State.Operations[w.operationID].Phase = "stopping"
+		if err := m.save(); err != nil {
+			m.failedSave(in, w, err)
+			m.mu.Unlock()
+			return
+		}
 		identity := *r.Identity
 		grace := in.Snapshot.Timeouts.StopSeconds
 		force := in.Snapshot.Timeouts.ForceSeconds
@@ -610,9 +611,23 @@ func (m *Manager) stopOrRestart(id string, w, old *worker) {
 		m.mu.Unlock()
 		return
 	}
+	if m.isClosed || cancelled(w) {
+		m.mu.Unlock()
+		return
+	}
+	m.store.State.Operations[w.operationID].Phase = "cleanup"
+	if err := m.save(); err != nil {
+		m.failedSave(in, w, err)
+		m.mu.Unlock()
+		return
+	}
 	for _, run := range in.Runs {
 		if run.Identity != nil && !run.InputRemoved {
-			if err := engine.CleanupInput(*run.Identity); err != nil {
+			cleanup := engine.CleanupInput
+			if run.StopResult != nil && run.StopResult.Confirmed {
+				cleanup = engine.CleanupConfirmedInput
+			}
+			if err := cleanup(*run.Identity); err != nil {
 				in.Cleanup = "failed"
 				m.finish(in, w, "failed", fail("CLEANUP_FAILED", "cleanup", err.Error()))
 				m.mu.Unlock()

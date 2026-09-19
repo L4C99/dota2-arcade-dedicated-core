@@ -215,3 +215,20 @@ func TestPublicExampleSyntax(t *testing.T) {
 		}
 	}
 }
+
+func TestSnapshotExpansionDoesNotStatResources(t *testing.T) {
+	tmpl := fixture(t)
+	tmpl.Executable = filepath.Join(tmpl.WorkingDirectory, "uninstalled.exe")
+	tmpl.WorkingDirectory = filepath.Join(tmpl.WorkingDirectory, "missing")
+	v := Values{InstanceID: "i_test", CfgName: "unique.cfg", LogPath: filepath.Join(t.TempDir(), "engine.log"), GamePort: 12345}
+	if _, e := Expand(tmpl, v); e == nil {
+		t.Fatal("runtime expansion skipped existence check")
+	}
+	if _, e := ExpandSnapshot(tmpl, v); e != nil {
+		t.Fatal(e)
+	}
+	tmpl.CFG.Lines = append(tmpl.CFG.Lines, "{{unknown}}")
+	if _, e := ExpandSnapshot(tmpl, v); e == nil {
+		t.Fatal("snapshot syntax check weakened")
+	}
+}

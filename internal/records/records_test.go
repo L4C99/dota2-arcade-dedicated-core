@@ -210,12 +210,20 @@ func TestCFGConflictAndChangedContentNeverDeleted(t *testing.T) {
 	if r == nil {
 		t.Fatal("failed run intent absent")
 	}
-	if err := s.CleanupRun(a, r); err != nil {
-		t.Fatal(err)
+	if err := s.CleanupRun(a, r); err == nil {
+		t.Fatal("conflicting cfg cleanup must report refusal")
 	}
 	b, _ := os.ReadFile(expected)
 	if string(b) != string(foreign) {
 		t.Fatal("removed unowned cfg")
+	}
+	// The test owner resolves its own deliberately introduced conflict. The
+	// core must then complete the pending cleanup without creating a process.
+	if err := os.Remove(expected); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CleanupRun(a, r); err != nil {
+		t.Fatal(err)
 	}
 	r2, err := s.PrepareRun(a)
 	if err != nil {
@@ -251,6 +259,7 @@ func TestCorruptStateRejectedWithoutOverwrite(t *testing.T) {
 			dir := t.TempDir()
 			path := filepath.Join(dir, "state.json")
 			mustWrite(t, path, []byte(data))
+			mustWrite(t, filepath.Join(dir, markerName), []byte(markerContent))
 			if _, err := Open(dir); err == nil {
 				t.Fatal("accepted corrupt state")
 			}
@@ -303,9 +312,10 @@ func TestInvalidRunRecordRejected(t *testing.T) {
 	a := create(t, s, path, availablePort(t), "a")
 	a.Runs = []*Run{nil}
 	a.Generation = 1
-	if err := s.Save(); err != nil {
-		t.Fatal(err)
+	if err := s.Save(); err == nil {
+		t.Fatal("Save accepted null run")
 	}
+	writeChecksummedState(t, s)
 	if _, err := Open(s.Dir); err == nil {
 		t.Fatal("accepted null run record")
 	}

@@ -21,9 +21,11 @@ import (
 	"github.com/L4C99/dota2-arcade-dedicated-core/internal/engine"
 )
 
-const FormatVersion = 1
+const FormatVersion = 2
+const MaxStateBytes = 64 << 20
 
 type Failure struct {
+	cause       error
 	Code        string `json:"code"`
 	Stage       string `json:"stage"`
 	Message     string `json:"message"`
@@ -32,23 +34,26 @@ type Failure struct {
 }
 
 func (e *Failure) Error() string { return e.Code + ": " + e.Message }
+func (e *Failure) Unwrap() error { return e.cause }
 
 type Run struct {
-	Generation   int                `json:"generation"`
-	Directory    string             `json:"directory"`
-	LogPath      string             `json:"logPath"`
-	CFGPath      string             `json:"cfgPath"`
-	CFGDigest    string             `json:"cfgDigest"`
-	Arguments    []string           `json:"arguments"`
-	CreatedAt    time.Time          `json:"createdAt"`
-	Prepared     bool               `json:"prepared"`
-	CFGCreated   bool               `json:"cfgCreated"`
-	CFGRemoved   bool               `json:"cfgRemoved"`
-	InputRemoved bool               `json:"inputRemoved"`
-	Identity     *engine.Identity   `json:"identity"`
-	Evidence     *engine.Evidence   `json:"evidence"`
-	Bindings     []engine.Binding   `json:"bindings"`
-	StopResult   *engine.StopResult `json:"stopResult"`
+	SpawnAttempted  bool               `json:"spawnAttempted"`
+	StartupDeadline time.Time          `json:"startupDeadline"`
+	Generation      int                `json:"generation"`
+	Directory       string             `json:"directory"`
+	LogPath         string             `json:"logPath"`
+	CFGPath         string             `json:"cfgPath"`
+	CFGDigest       string             `json:"cfgDigest"`
+	Arguments       []string           `json:"arguments"`
+	CreatedAt       time.Time          `json:"createdAt"`
+	Prepared        bool               `json:"prepared"`
+	CFGCreated      bool               `json:"cfgCreated"`
+	CFGRemoved      bool               `json:"cfgRemoved"`
+	InputRemoved    bool               `json:"inputRemoved"`
+	Identity        *engine.Identity   `json:"identity"`
+	Evidence        *engine.Evidence   `json:"evidence"`
+	Bindings        []engine.Binding   `json:"bindings"`
+	StopResult      *engine.StopResult `json:"stopResult"`
 }
 type Instance struct {
 	ID                 string          `json:"instanceId"`
@@ -67,6 +72,7 @@ type Instance struct {
 	Error              *Failure        `json:"error"`
 }
 type Operation struct {
+	Phase      string     `json:"phase"`
 	ID         string     `json:"operationId"`
 	Kind       string     `json:"kind"`
 	InstanceID string     `json:"instanceId"`
@@ -82,14 +88,16 @@ type Key struct {
 	OperationID string `json:"operationId"`
 }
 type State struct {
+	Checksum      string                `json:"checksum"`
 	FormatVersion int                   `json:"formatVersion"`
 	Instances     map[string]*Instance  `json:"instances"`
 	Operations    map[string]*Operation `json:"operations"`
 	Keys          map[string]Key        `json:"keys"`
 }
 type Store struct {
-	Dir   string
-	State State
+	Dir      string
+	State    State
+	saveHook func(string) error // Tests inject failures; nil in production.
 }
 
 func ID(prefix string) (string, error) {
@@ -119,23 +127,44 @@ func Open(dir string) (*Store, error) {
 			return nil, fmt.Errorf("data directory must use ASCII for engine logs")
 		}
 	}
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := durableMkdirAll(dir); err != nil {
 		return nil, err
 	}
 	s := &Store{Dir: dir, State: State{FormatVersion: FormatVersion, Instances: map[string]*Instance{}, Operations: map[string]*Operation{}, Keys: map[string]Key{}}}
-	f, err := os.Open(filepath.Join(dir, "state.json"))
+	markerExists, err := verifyMarker(dir)
+	if err != nil {
+		return nil, err
+	}
+	statePath := filepath.Join(dir, "state.json")
+	st, err := os.Lstat(statePath)
 	if errors.Is(err, os.ErrNotExist) {
+		if markerExists {
+			return nil, fmt.Errorf("initialized store has no state.json; refusing empty recovery")
+		}
+		if _, entryErr := os.Lstat(filepath.Join(dir, "instances")); entryErr == nil || !os.IsNotExist(entryErr) {
+			return nil, fmt.Errorf("instance files exist without state; refusing empty recovery")
+		}
 		return s, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	b, err := io.ReadAll(io.LimitReader(f, 64<<20+1))
+	if !st.Mode().IsRegular() {
+		return nil, fmt.Errorf("state must be a regular file")
+	}
+	if !markerExists {
+		return nil, fmt.Errorf("state exists without initialization marker; refusing damaged store")
+	}
+	f, err := os.Open(statePath)
 	if err != nil {
 		return nil, err
 	}
-	if len(b) > 64<<20 {
+	defer f.Close()
+	b, err := io.ReadAll(io.LimitReader(f, MaxStateBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(b) > MaxStateBytes {
 		return nil, fmt.Errorf("state exceeds 64 MiB; refusing partial load")
 	}
 	var loaded State
@@ -146,43 +175,37 @@ func Open(dir string) (*Store, error) {
 	if s.State.FormatVersion != FormatVersion {
 		return nil, fmt.Errorf("unsupported data formatVersion")
 	}
-	if s.State.Instances == nil || s.State.Operations == nil || s.State.Keys == nil {
-		return nil, fmt.Errorf("incomplete state")
+	expected, err := stateChecksum(s.State)
+	if err != nil {
+		return nil, err
 	}
-	for id, in := range s.State.Instances {
-		if in == nil || !validID(id, "i") || in.ID != id || in.Port < 1 || in.Port > 65535 {
-			return nil, fmt.Errorf("invalid instance record")
-		}
-		if in.Generation != len(in.Runs) {
-			return nil, fmt.Errorf("invalid generation count")
-		}
-		for n, r := range in.Runs {
-			if r == nil || r.Generation != n+1 {
-				return nil, fmt.Errorf("invalid run record")
-			}
-			expectedDir := filepath.Join(dir, "instances", id, "runs", fmt.Sprintf("%06d", r.Generation))
-			expectedCFG := filepath.Join(in.Snapshot.CFG.Directory, fmt.Sprintf("d2core_%s_g%d.cfg", id, r.Generation))
-			if r.Directory != expectedDir || r.LogPath != filepath.Join(expectedDir, "engine.log") || r.CFGPath != expectedCFG {
-				return nil, fmt.Errorf("run path ownership mismatch")
-			}
-		}
+	if s.State.Checksum != expected {
+		return nil, fmt.Errorf("state checksum mismatch")
 	}
-	for id, op := range s.State.Operations {
-		if op == nil || !validID(id, "o") || op.ID != id || s.State.Instances[op.InstanceID] == nil {
-			return nil, fmt.Errorf("invalid operation record")
-		}
-	}
-	for _, key := range s.State.Keys {
-		if s.State.Instances[key.InstanceID] == nil || s.State.Operations[key.OperationID] == nil {
-			return nil, fmt.Errorf("orphaned idempotency record")
-		}
+	if err = s.validateState(); err != nil {
+		return nil, err
 	}
 	return s, nil
 }
 
 func (s *Store) Save() error {
-	b, err := json.MarshalIndent(s.State, "", "  ")
+	if err := s.validateState(); err != nil {
+		return err
+	}
+	next := s.State
+	checksum, err := stateChecksum(next)
 	if err != nil {
+		return err
+	}
+	next.Checksum = checksum
+	b, err := json.MarshalIndent(next, "", "  ")
+	if err != nil {
+		return err
+	}
+	if len(b) > MaxStateBytes {
+		return fmt.Errorf("state exceeds 64 MiB; refusing save")
+	}
+	if err = ensureInitialized(s.Dir); err != nil {
 		return err
 	}
 	f, err := os.CreateTemp(s.Dir, ".state-*")
@@ -192,6 +215,11 @@ func (s *Store) Save() error {
 	tmp := f.Name()
 	defer os.Remove(tmp)
 	if _, err = f.Write(b); err == nil {
+		if s.saveHook != nil {
+			err = s.saveHook("temp-written")
+		}
+	}
+	if err == nil {
 		err = f.Sync()
 	}
 	closeErr := f.Close()
@@ -201,7 +229,22 @@ func (s *Store) Save() error {
 	if closeErr != nil {
 		return closeErr
 	}
-	return os.Rename(tmp, filepath.Join(s.Dir, "state.json"))
+	if s.saveHook != nil {
+		if err = s.saveHook("before-replace"); err != nil {
+			return err
+		}
+	}
+	published, err := replaceState(tmp, filepath.Join(s.Dir, "state.json"))
+	if published {
+		s.State.Checksum = checksum
+	}
+	if err == nil && s.saveHook != nil {
+		err = s.saveHook("after-replace")
+	}
+	if err != nil && published {
+		return &DurabilityError{Err: err}
+	}
+	return err
 }
 
 // CheckPort probes both transport families. This is a preflight, not a lease.
@@ -293,11 +336,15 @@ func (s *Store) Create(path string, port int, key string) (*Instance, *Operation
 	}
 	now := time.Now().UTC()
 	in := &Instance{ID: id, TemplatePath: filepath.Clean(path), Snapshot: t, Port: port, Lifecycle: "active", Process: "stopped", Room: "unknown", Cleanup: "pending", CurrentOperationID: oid, CreatedAt: now, UpdatedAt: now, Runs: []*Run{}}
-	op := &Operation{ID: oid, Kind: "create", InstanceID: id, Status: "running", CreatedAt: now}
+	op := &Operation{ID: oid, Kind: "create", InstanceID: id, Status: "running", Phase: "accepted", CreatedAt: now}
 	s.State.Instances[id] = in
 	s.State.Operations[oid] = op
 	s.State.Keys[key] = Key{fp, id, oid}
 	if err = s.Save(); err != nil {
+		var uncertain *DurabilityError
+		if errors.As(err, &uncertain) {
+			return in, op, &Failure{Code: "IO_ERROR", Stage: "persist", Message: err.Error(), InstanceID: id, OperationID: oid, cause: err}
+		}
 		delete(s.State.Instances, id)
 		delete(s.State.Operations, oid)
 		delete(s.State.Keys, key)
@@ -316,7 +363,7 @@ func (s *Store) PrepareRun(in *Instance) (*Run, error) {
 		return nil, fmt.Errorf("cannot prepare run in current state")
 	}
 	for _, previous := range in.Runs {
-		if previous.CFGCreated && !previous.CFGRemoved {
+		if !previous.CFGRemoved {
 			return nil, fmt.Errorf("previous generated cfg must be cleaned before another generation")
 		}
 	}
@@ -336,10 +383,13 @@ func (s *Store) PrepareRun(in *Instance) (*Run, error) {
 	if err = s.Save(); err != nil {
 		return r, err
 	}
-	if err = os.MkdirAll(filepath.Dir(dir), 0700); err != nil {
+	if err = durableMkdirAll(filepath.Dir(dir)); err != nil {
 		return r, err
 	}
 	if err = os.Mkdir(dir, 0700); err != nil {
+		return r, err
+	}
+	if err = syncDirectory(filepath.Dir(dir)); err != nil {
 		return r, err
 	}
 	if _, err = exclusive(filepath.Join(dir, "generated.cfg"), []byte(expanded.CFG)); err != nil {
@@ -368,7 +418,10 @@ func exclusive(path string, b []byte) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	return true, closeErr
+	if closeErr != nil {
+		return true, closeErr
+	}
+	return true, syncDirectory(filepath.Dir(path))
 }
 
 // CleanupRun removes only the exact generated cfg whose content still matches.
@@ -393,11 +446,14 @@ func (s *Store) CleanupRun(in *Instance, r *Run) error {
 	if r.CFGPath != expected {
 		return fmt.Errorf("cfg ownership path mismatch")
 	}
-	if r.CFGRemoved || !r.CFGCreated {
+	if r.CFGRemoved {
 		return nil
 	}
 	st, err := os.Lstat(expected)
 	if errors.Is(err, os.ErrNotExist) {
+		if err = syncDirectory(filepath.Dir(expected)); err != nil {
+			return err
+		}
 		r.CFGRemoved = true
 		return s.Save()
 	}
@@ -417,6 +473,10 @@ func (s *Store) CleanupRun(in *Instance, r *Run) error {
 	if err = os.Remove(expected); err != nil {
 		return err
 	}
+	if err = syncDirectory(filepath.Dir(expected)); err != nil {
+		return err
+	}
+	r.CFGCreated = true
 	r.CFGRemoved = true
 	return s.Save()
 }

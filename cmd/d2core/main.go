@@ -19,6 +19,7 @@ import (
 	"github.com/L4C99/dota2-arcade-dedicated-core/internal/engine"
 	"github.com/L4C99/dota2-arcade-dedicated-core/internal/localipc"
 	"github.com/L4C99/dota2-arcade-dedicated-core/internal/m0"
+	"github.com/L4C99/dota2-arcade-dedicated-core/internal/records"
 )
 
 var buildTime = "unknown" // Set with -ldflags at packaging time, not the commit timestamp.
@@ -80,7 +81,7 @@ func run(args []string) error {
 		if f.NArg() != 0 {
 			return usage("version accepts no positional arguments")
 		}
-		v := map[string]any{"version": "0.1.0-dev", "gitCommit": "unknown", "buildTime": buildTime, "schemaVersion": 1, "formatVersion": 1, "protocolVersion": 1}
+		v := map[string]any{"version": "0.1.0-dev", "gitCommit": "unknown", "buildTime": buildTime, "schemaVersion": 1, "formatVersion": records.FormatVersion, "protocolVersion": 1}
 		if info, ok := debug.ReadBuildInfo(); ok {
 			for _, s := range info.Settings {
 				if s.Key == "vcs.revision" {

@@ -1,6 +1,6 @@
 # 本地协议 v1（M1-01 契约）
 
-本文件固定 M1 实现目标，不表示接口已可用。实现和验收状态见 [M1 记录](validation/m1.md)。模板 schemaVersion=1、磁盘 formatVersion=1、本地 protocolVersion=1 分开编号；程序 version 输出版本、Git 提交、构建时间及上述版本。未知版本/字段拒绝，不覆盖已有数据。
+本文件固定本地协议；实现和验收状态见 [M1 记录](validation/m1.md) 与 [M2 记录](validation/m2.md)。模板 schemaVersion=1、磁盘 formatVersion=2、本地 protocolVersion=1 分开编号；程序 version 输出版本、Git 提交、构建时间及上述版本。未知版本/字段拒绝，不覆盖已有数据。M2 不自动迁移 M1 的格式1实验记录。
 
 ## 访问与报文
 
@@ -28,7 +28,9 @@
 {"protocolVersion":1,"ok":false,"error":{"code":"PORT_IN_USE","stage":"validate","message":"requested port is occupied"}}
 ```
 
-产生记录后的错误附 instanceId/operationId。稳定错误码：INVALID_REQUEST、UNSUPPORTED_VERSION、INVALID_TEMPLATE、INVALID_PATH、PORT_REQUIRED、PORT_IN_USE、NOT_FOUND、BUSY、RECLAIMED、INVALID_STATE、IDEMPOTENCY_CONFLICT、MANAGER_UNAVAILABLE、MANAGER_LOCKED、IDENTITY_UNVERIFIED、START_FAILED、START_TIMEOUT、STOP_FAILED、CLEANUP_FAILED、IO_ERROR、INTERNAL_ERROR。stage 为 protocol/validate/persist/spawn/observe/stop/cleanup/transport。message 供人阅读，不能作为程序分支依据。
+产生记录后的错误附 instanceId/operationId。稳定错误码：INVALID_REQUEST、UNSUPPORTED_VERSION、INVALID_TEMPLATE、INVALID_PATH、PORT_REQUIRED、PORT_IN_USE、NOT_FOUND、BUSY、RECLAIMED、INVALID_STATE、IDEMPOTENCY_CONFLICT、MANAGER_UNAVAILABLE、MANAGER_LOCKED、IDENTITY_UNVERIFIED、START_FAILED、START_TIMEOUT、STOP_FAILED、CLEANUP_FAILED、INTERRUPTED、IO_ERROR、INTERNAL_ERROR。stage 为 protocol/validate/persist/spawn/observe/stop/cleanup/transport/recover。message 供人阅读，不能作为程序分支依据。
+
+operation 增加诊断字段 phase：accepted/preparing/spawning/observing/stopping/cleanup/done。完成与否仍以 status 为准。恢复不启动新进程；未形成可恢复代次的创建/重启结束为 INTERRUPTED，保留原 ID、诊断和预约。已经存在且核验通过的本代进程继续原截止时间的观察；已受理 stop 继续安全停止/清理。完整身份冲突或发现多个候选不自动认领，当前状态保持 unknown。
 
 ## CLI 与请求参数
 
