@@ -6,7 +6,7 @@
 
 M0 双平台运行验证已完成，包括真实客户端进房、停止与重开、进程身份核验和启动工具中断后的日志行为。这些是实验结果，不代表管理功能已实现。
 
-当前可运行的 Go 工具只有 `m0-inspect`：只读检查显式提供的资源路径并计算文件指纹。创建、停止、重启、端口分配和本地管理协议仍在后续路线图中。
+M1 正在开发。当前提供离线 `check --template ABS --json`、`version --json`，以及 M0 只读资源检查 `m0-inspect`。模板 v1 的静态校验和安全展开已通过 Windows/Linux 原生测试；创建、停止、重启及本地管理服务尚不可用。
 
 ## 构建与检查
 
@@ -26,7 +26,9 @@ go run ./cmd/d2core m0-inspect
 - [开发路线图](docs/roadmap.md)：阶段目标和验收标准。
 - [技术决策](docs/decisions.md)：实现约束与后续验证责任。
 - [M0 验证报告](docs/validation/m0.md)：环境、结果、限制和复验流程。
-- [配置示例说明](examples/README.md)：草案模板，尚无正式模板加载接口。
+- [本地协议](docs/local-api.md)：M1 契约，接口可用性以阶段记录为准。
+- [M1 进度与验收](docs/validation/m1.md)：实现、自动验证和真实进房分开记录。
+- [配置示例说明](examples/README.md)：模板 v1、双平台路径和就绪规则填写说明。
 - [M0 实验工具](tools/m0/README.md)：只读采集及 Windows 进程探针。
 
 ## 当前运行限制

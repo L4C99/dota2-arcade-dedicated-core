@@ -1,22 +1,11 @@
 {
   "schemaVersion": 1,
   "name": "example",
-  "executable": "C:/Games/Dota2/game/bin/win64/dota2.exe",
-  "workingDirectory": "C:/Games/Dota2/game",
-  "arguments": [
-    "-dedicated",
-    "-allow_no_lobby_connect",
-    "-ip",
-    "0.0.0.0",
-    "-port",
-    "{{game_port}}",
-    "-con_logfile",
-    "{{log_path}}",
-    "+exec",
-    "{{cfg_name}}"
-  ],
+  "executable": "/opt/dota2/game/bin/linuxsteamrt64/dota2",
+  "workingDirectory": "/opt/dota2/game",
+  "arguments": ["-dedicated", "-allow_no_lobby_connect", "-ip", "0.0.0.0", "-port", "{{game_port}}", "-con_logfile", "{{log_path}}", "+exec", "{{cfg_name}}"],
   "cfg": {
-    "directory": "C:/Games/Dota2/game/dota/cfg",
+    "directory": "/opt/dota2/game/dota/cfg",
     "lines": [
       "hostname \"{{instance_id}}\"",
       "map example_map gamemode=15 customgamemode=\"sample_addon.vpk\" nomapvalidation=1",
