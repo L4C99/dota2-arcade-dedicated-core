@@ -28,7 +28,7 @@
 {"protocolVersion":1,"ok":false,"error":{"code":"PORT_IN_USE","stage":"validate","message":"requested port is occupied"}}
 ```
 
-产生记录后的错误附 instanceId/operationId。稳定错误码：INVALID_REQUEST、UNSUPPORTED_VERSION、INVALID_TEMPLATE、INVALID_PATH、PORT_REQUIRED、PORT_IN_USE、NOT_FOUND、BUSY、RECLAIMED、INVALID_STATE、IDEMPOTENCY_CONFLICT、MANAGER_UNAVAILABLE、MANAGER_LOCKED、IDENTITY_UNVERIFIED、START_FAILED、START_TIMEOUT、STOP_FAILED、CLEANUP_FAILED、INTERRUPTED、IO_ERROR、INTERNAL_ERROR。stage 为 protocol/validate/persist/spawn/observe/stop/cleanup/transport/recover。message 供人阅读，不能作为程序分支依据。
+产生记录后的错误附 instanceId/operationId。稳定错误码：INVALID_REQUEST、UNSUPPORTED_VERSION、INVALID_TEMPLATE、INVALID_PATH、PORT_REQUIRED、PORT_IN_USE、NO_PORT_AVAILABLE、INSUFFICIENT_STORAGE、NOT_FOUND、BUSY、RECLAIMED、INVALID_STATE、IDEMPOTENCY_CONFLICT、MANAGER_UNAVAILABLE、MANAGER_LOCKED、IDENTITY_UNVERIFIED、START_FAILED、START_TIMEOUT、STOP_FAILED、CLEANUP_FAILED、INTERRUPTED、IO_ERROR、INTERNAL_ERROR。stage 为 protocol/validate/persist/spawn/observe/stop/cleanup/transport/recover/storage。message 供人阅读，不能作为程序分支依据。
 
 operation 增加诊断字段 phase：accepted/preparing/spawning/observing/stopping/cleanup/done。完成与否仍以 status 为准。恢复不启动新进程；未形成可恢复代次的创建/重启结束为 INTERRUPTED，保留原 ID、诊断和预约。已经存在且核验通过的本代进程继续原截止时间的观察；已受理 stop 继续安全停止/清理。完整身份冲突或发现多个候选不自动认领，当前状态保持 unknown。
 
@@ -38,9 +38,9 @@ operation 增加诊断字段 phase：accepted/preparing/spawning/observing/stopp
 
 | 命令 / method | 参数 | 结果 |
 | --- | --- | --- |
-| serve（仅 CLI） | --data-dir 可选 | 前台运行管理端；退出不终止专服 |
+| serve（仅 CLI） | --data-dir、--port-min/--port-max、--history-days、--min-free-mib 可选 | 前台运行管理端；退出不终止专服 |
 | check（仅 CLI，离线） | --template ABS | 校验规范化模板；不启动、不承诺资源可加载或端口可用 |
-| create | template: ABS，port: 1..65535，idempotencyKey: 必填 | accepted、instanceId、operationId；M1 缺 port 返回 PORT_REQUIRED，M3 增加自动分配 |
+| create | template: ABS，port: 0或省略为自动、1..65535为显式，idempotencyKey: 必填 | accepted、instanceId、operationId；无可用自动端口返回 NO_PORT_AVAILABLE |
 | list | 无 | 活动与失败待回收实例摘要；不列已回收历史 |
 | status | instanceId | 实例快照、当前代次、状态及证据 |
 | operation | operationId | kind、instanceId、generation、status、error、createdAt、finishedAt |
@@ -51,7 +51,7 @@ operation 增加诊断字段 phase：accepted/preparing/spawning/observing/stopp
 
 对应 CLI：create --template ABS --port N --idempotency-key KEY；status/restart/stop 接位置 instanceId；operation 接位置 operationId；logs INSTANCE --tail N --generation N。所有管理端调用命令支持 --data-dir ABS。本地协议只接受上表字段，不允许执行任意 shell 或新增控制台命令。
 
-三个变更命令统一返回上述 ID 和 state，state 是受理时的真实当前状态，不是完成预测。status 的 result 为实例对象：instanceId、templateName、port、generation、lifecycle、process、room、cleanup、currentOperationId、createdAt、updatedAt、evidence、bindings、error。list 的 result 为 {instances:[实例对象]}；operation 的 result 为操作对象，字段为上表所列，另含 operationId。不存在的可选证据/error/finishedAt 使用 null；数组为空时使用 []。所有时间使用 UTC RFC3339Nano 字符串。
+三个变更命令统一返回上述 ID 和 state，state 是受理时的真实当前状态，不是完成预测。status 的 result 为实例对象：instanceId、templateName、port、generation、lifecycle、process、room、cleanup、currentOperationId、createdAt、updatedAt、evidence、bindings、error。list 的 result 为 {instances:[实例对象],storage:{checkedAt,freeBytes,minFreeBytes,historyDays,error}}；storage 是最近在线维护的观测，非实时容量保证；operation 的 result 为操作对象，字段为上表所列，另含 operationId。不存在的可选证据/error/finishedAt 使用 null；数组为空时使用 []。所有时间使用 UTC RFC3339Nano 字符串。
 
 evidence 为 {generation,observedAt,source,matched,valid}：source 为本代日志绝对路径，matched 为已命中的规则及首次 observedAt 列表；规则与适用地图保存在模板快照中。未读取本代日志时为 null；退出或身份不明确后 valid=false，room 不再为 ready，历史证据仍可诊断。bindings 为 {protocol,address,port,pid,observedAt} 数组，只表达已核验进程的实际监听，不表示公网可达；不以 0.0.0.0 生成客户端连接地址。
 
@@ -89,4 +89,8 @@ instance_id/game_port/cfg_name 为核心生成的安全 ASCII token。log_path �
 
 创建键为1–128字节 ASCII 字母、数字、点、下划线或短横线；作用域为同一 data-dir，同用户。请求指纹包含规范化模板路径及请求 port；同键同请求返回原 instanceId/operationId，不重读修改后的模板或开新房；同键不同请求返回 IDEMPOTENCY_CONFLICT。M1 固定并实现基本契约；并发、落盘窗口及重启恢复由 M2 全面验收。
 
-M1/M2 默认保留全部实例历史、操作和幂等映射，不因 stop 回收删除。M3 明确保留期限和容量策略并同步更新契约；删除历史时必须协调幂等保留，不能让旧键静默变为新建。调用者按原键重试超时请求，再查询操作；不要改用新键来掩盖不确定结果。
+M3 默认从成功回收时间起保留7天，可由 serve --history-days 配置为1..3650天。到期后只清理已回收实例的日志和配置副本，实例、操作与创建键在同一状态提交中移除；任何未完成清理/未确认停止的实例不自动过期。保留期内旧键始终返回原结果，到期并清理后旧ID返回NOT_FOUND，旧键可视为新请求，因此调用方必须为新意图使用唯一键，不能无限期重试。清理失败保留记录并重试，不提前淘汰仍在保留期内的结果。缩短history-days会影响已有历史的到期时间，应先保存需要长期保留的证据。调用者按原键重试超时请求，再查询操作；不要改用新键来掩盖不确定结果。
+
+自动范围默认27015–27064，由管理端serve --port-min/--port-max配置，最大4096个候选；显式端口不受该范围限制。请求指纹中的自动端口为0，已分配结果不随范围改变；自动与显式请求复用同键会冲突。
+
+默认磁盘余量阈值1024MiB，可通过--min-free-mib配置。新意图和新的运行代次检查data-dir与cfg所在卷；空间不足返回INSUFFICIENT_STORAGE，原请求查询/重试和stop仍允许。每分钟最多清理16份到期历史并更新storage状态。活跃日志不截断、不轮转、不因容量自动停服，管理端离线期间由运维磁盘告警兜底；存在检查后外部写满的竞态，写入失败仍按持久化故障处理。状态文件64MiB硬上限保持，不提前删除保留期内记录以强行接受新请求。

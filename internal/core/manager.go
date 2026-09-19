@@ -31,6 +31,9 @@ type Manager struct {
 	writeError error
 	persist    func() error
 	ports      records.PortRange
+	options    Options
+	freeBytes  func(string) (uint64, error)
+	storage    storageStatus
 }
 type request struct {
 	ProtocolVersion int             `json:"protocolVersion"`
@@ -51,14 +54,20 @@ func Open(dir string) (*Manager, error) {
 }
 
 func OpenWithPorts(dir string, ports records.PortRange) (*Manager, error) {
-	if err := ports.Validate(); err != nil {
+	o := DefaultOptions()
+	o.Ports = ports
+	return OpenWithOptions(dir, o)
+}
+
+func OpenWithOptions(dir string, options Options) (*Manager, error) {
+	if err := options.Validate(); err != nil {
 		return nil, err
 	}
 	s, err := records.Open(dir)
 	if err != nil {
 		return nil, err
 	}
-	m := &Manager{store: s, workers: map[string]*worker{}, closed: make(chan struct{}), persist: s.Save, ports: ports}
+	m := &Manager{store: s, workers: map[string]*worker{}, closed: make(chan struct{}), persist: s.Save, ports: options.Ports, options: options, freeBytes: records.FreeBytes}
 	if err = m.recover(); err != nil {
 		return nil, err
 	}
@@ -169,6 +178,11 @@ func (m *Manager) dispatch(req request) (any, *records.Failure) {
 		if m.writeError != nil {
 			return nil, classify(m.writeError, "persist")
 		}
+		if _, retry := m.store.State.Keys[p.Key]; !retry {
+			if f := m.checkSpace(m.store.Dir); f != nil {
+				return nil, f
+			}
+		}
 		in, op, err := m.store.CreateInRange(p.Template, p.Port, p.Key, m.ports)
 		if err != nil {
 			var uncertain *records.DurabilityError
@@ -200,7 +214,7 @@ func (m *Manager) dispatch(req request) (any, *records.Failure) {
 		for _, id := range ids {
 			list = append(list, m.snapshot(m.store.State.Instances[id]))
 		}
-		return map[string]any{"instances": list}, nil
+		return map[string]any{"instances": list, "storage": m.storage}, nil
 	case "status", "stop", "restart":
 		var p struct {
 			ID string `json:"instanceId"`
@@ -338,6 +352,13 @@ func (m *Manager) launch(id string, w *worker) {
 		return
 	}
 	op := m.store.State.Operations[w.operationID]
+	for _, path := range []string{m.store.Dir, in.Snapshot.CFG.Directory} {
+		if f := m.checkSpace(path); f != nil {
+			m.finish(in, w, "failed", f)
+			m.mu.Unlock()
+			return
+		}
+	}
 	op.Phase = "preparing"
 	if err := m.save(); err != nil {
 		m.failedSave(in, w, err)
@@ -515,6 +536,11 @@ func (m *Manager) observe(in *records.Instance, r *records.Run, o *engine.Observ
 func (m *Manager) change(in *records.Instance, kind string) (any, *records.Failure) {
 	old := m.workers[in.ID]
 	if kind == "restart" {
+		for _, path := range []string{m.store.Dir, in.Snapshot.CFG.Directory} {
+			if f := m.checkSpace(path); f != nil {
+				return nil, f
+			}
+		}
 		if in.Lifecycle == "reclaimed" {
 			return nil, fail("RECLAIMED", "validate", "historical instance cannot restart")
 		}
@@ -692,6 +718,10 @@ func (m *Manager) watch() {
 			m.mu.Unlock()
 			return
 		}
+		if time.Since(m.storage.CheckedAt) >= time.Minute {
+			m.maintainStorage(time.Now().UTC())
+		}
+		currentObservers := map[string]bool{}
 		for id, in := range m.store.State.Instances {
 			if m.workers[id] != nil || in.Lifecycle == "reclaimed" || in.Process != "running" || len(in.Runs) == 0 {
 				continue
@@ -701,6 +731,7 @@ func (m *Manager) watch() {
 				continue
 			}
 			key := fmt.Sprintf("%s/%d", id, r.Generation)
+			currentObservers[key] = true
 			o := observers[key]
 			if o == nil {
 				o = engine.NewObserver(r.Generation, r.LogPath, in.Snapshot.Readiness)
@@ -709,6 +740,8 @@ func (m *Manager) watch() {
 			oldRoom := in.Room
 			_, failure := m.observe(in, r, o)
 			if failure != nil {
+				failure.InstanceID = in.ID
+				failure.OperationID = in.CurrentOperationID
 				in.Lifecycle = "failed"
 				if m.writeError == nil {
 					in.Error = failure
@@ -717,13 +750,20 @@ func (m *Manager) watch() {
 				if err := m.save(); err != nil {
 					in.Error = fail("IO_ERROR", "persist", err.Error())
 					in.Error.InstanceID = in.ID
+					in.Error.OperationID = in.CurrentOperationID
 				}
 			} else if oldRoom != in.Room {
 				in.UpdatedAt = time.Now().UTC()
 				if err := m.save(); err != nil {
 					in.Error = fail("IO_ERROR", "persist", err.Error())
 					in.Error.InstanceID = in.ID
+					in.Error.OperationID = in.CurrentOperationID
 				}
+			}
+		}
+		for key := range observers {
+			if !currentObservers[key] {
+				delete(observers, key)
 			}
 		}
 		m.mu.Unlock()

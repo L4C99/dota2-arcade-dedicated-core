@@ -104,7 +104,7 @@ func flagsBeforePositionals(args []string) []string {
 		a := args[i]
 		if strings.HasPrefix(a, "-") {
 			flags = append(flags, a)
-			if !strings.Contains(a, "=") && (a == "--data-dir" || a == "--template" || a == "--port" || a == "--port-min" || a == "--port-max" || a == "--idempotency-key" || a == "--tail" || a == "--generation") && i+1 < len(args) {
+			if !strings.Contains(a, "=") && (a == "--data-dir" || a == "--template" || a == "--port" || a == "--port-min" || a == "--port-max" || a == "--history-days" || a == "--min-free-mib" || a == "--idempotency-key" || a == "--tail" || a == "--generation") && i+1 < len(args) {
 				i++
 				flags = append(flags, args[i])
 			}
@@ -124,10 +124,12 @@ func manage(command string, args []string) error {
 	f.Bool("json", false, "structured output (default)")
 	var template, key string
 	var port, tail, generation int
-	ports := records.DefaultPortRange()
+	options := core.DefaultOptions()
 	if command == "serve" {
-		f.IntVar(&ports.Min, "port-min", ports.Min, "automatic game port range start")
-		f.IntVar(&ports.Max, "port-max", ports.Max, "automatic game port range end")
+		f.IntVar(&options.Ports.Min, "port-min", options.Ports.Min, "automatic game port range start")
+		f.IntVar(&options.Ports.Max, "port-max", options.Ports.Max, "automatic game port range end")
+		f.IntVar(&options.HistoryDays, "history-days", options.HistoryDays, "reclaimed history and request-key retention days")
+		f.IntVar(&options.MinFreeMiB, "min-free-mib", options.MinFreeMiB, "minimum free disk space before new starts")
 	}
 	if command == "create" {
 		f.StringVar(&template, "template", "", "absolute template path")
@@ -149,7 +151,7 @@ func manage(command string, args []string) error {
 		return usage("%s: unexpected or missing positional ID", command)
 	}
 	if command == "serve" {
-		if err = ports.Validate(); err != nil {
+		if err = options.Validate(); err != nil {
 			return usage("%v", err)
 		}
 		s, err := localipc.Listen(*dir)
@@ -162,7 +164,7 @@ func manage(command string, args []string) error {
 			return err
 		}
 		defer s.Close()
-		m, err := core.OpenWithPorts(*dir, ports)
+		m, err := core.OpenWithOptions(*dir, options)
 		if err != nil {
 			_ = writeResult(nil, map[string]string{"code": "IO_ERROR", "stage": "persist", "message": err.Error()})
 			return err
