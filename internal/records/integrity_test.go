@@ -201,11 +201,11 @@ func TestCleanupUnrecordedCFGCreation(t *testing.T) {
 	}
 	in = reopened.State.Instances[in.ID]
 	r = in.Runs[0]
-	if e = reopened.CleanupRun(in, r); e != nil {
-		t.Fatal(e)
+	if e = reopened.CleanupRun(in, r); e == nil {
+		t.Fatal("unrecorded ownership must not authorize deletion")
 	}
-	if _, e = os.Stat(r.CFGPath); !os.IsNotExist(e) {
-		t.Fatal("crash-window cfg not removed")
+	if _, e = os.Stat(r.CFGPath); e != nil {
+		t.Fatal("unrecorded cfg must remain")
 	}
 	if _, e = os.Stat(r.LogPath); e != nil {
 		t.Fatal("history log removed")

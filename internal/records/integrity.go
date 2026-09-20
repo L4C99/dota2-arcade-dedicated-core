@@ -104,6 +104,9 @@ func (s *Store) validateState() error {
 			if r.Prepared && !r.CFGCreated {
 				return fmt.Errorf("prepared run without cfg ownership")
 			}
+			if r.CFGOwnership != nil && (r.CFGOwnership.Parent == "" || r.CFGOwnership.File == "") {
+				return fmt.Errorf("incomplete cfg ownership")
+			}
 			if r.SpawnAttempted && (!r.Prepared || r.StartupDeadline.IsZero()) {
 				return fmt.Errorf("spawn intent lacks preparation/deadline")
 			}

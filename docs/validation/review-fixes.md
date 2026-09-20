@@ -21,3 +21,5 @@ CJ-07用户确认：额外TCP监听、UDP服务端口参与跨实例检查；相
 CJ-01实际Windows命令（Go1.27.1）：go test ./internal/core ./internal/engine -run TestStart -count=1，通过。故障注入覆盖OpenProcess/nativeIdentity；core验证PID>0错误返回后的已退出状态可stop回收。Linux新增pidfd/read/mismatch/poll故障与resolved路径测试，尚未执行，不能标通过。首次构建发现测试seam与start方法同名，改为spawn后定向通过。
 
 CJ-02：写入UpdatedAt/FinishedAt采用当前墙钟与已有记录时间最大值，未删除完整性校验、未改变启动截止时间/进程身份。Windows go test ./internal/core -run TestBackwardClock -count=1通过，覆盖回拨后restart/finish/stop、watch、future intent recovery、reopen/status/create。CJ-01修复提交2e4dbad；Linux全套待执行。
+
+CJ-02提交a9e3817。CJ-03新增format2可选cfgOwnership，checksum覆盖；旧记录可打开，但现存文件无ownership或CFGCreated=false拒绝删除。Windows按原句柄删除并禁止delete-sharing；Linux固定父目录，私有随机暂存后复核对象/内容，遇到交换保留并尝试无覆盖恢复；未知崩溃残留不猜测删除。Windows records全套通过；Linux Go1.27.1普通用户原生 go test -mod=vendor ./internal/engine ./internal/core ./internal/records -run 'TestStart|TestBackwardClock|TestCFG|TestCleanupUnrecorded' -count=1通过，覆盖CJ01—03新增用例。Linux工具链官方直连失败后经本机下载传入，未动游戏。新增测试覆盖同内容不归属、旧格式、父目录替换、symlink/junction及核验后交换；拒绝后可显式重试。

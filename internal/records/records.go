@@ -47,6 +47,7 @@ type Run struct {
 	Arguments       []string           `json:"arguments"`
 	CreatedAt       time.Time          `json:"createdAt"`
 	Prepared        bool               `json:"prepared"`
+	CFGOwnership    *CFGOwnership      `json:"cfgOwnership,omitempty"`
 	CFGCreated      bool               `json:"cfgCreated"`
 	CFGRemoved      bool               `json:"cfgRemoved"`
 	InputRemoved    bool               `json:"inputRemoved"`
@@ -95,9 +96,10 @@ type State struct {
 	Keys          map[string]Key        `json:"keys"`
 }
 type Store struct {
-	Dir      string
-	State    State
-	saveHook func(string) error // Tests inject failures; nil in production.
+	Dir         string
+	State       State
+	saveHook    func(string) error // Tests inject failures; nil in production.
+	cleanupHook func()             // Test-only verification/deletion race seam.
 }
 
 func ID(prefix string) (string, error) {
@@ -400,7 +402,7 @@ func (s *Store) PrepareRun(in *Instance) (*Run, error) {
 	if _, err = exclusive(r.LogPath, nil); err != nil {
 		return r, err
 	}
-	r.CFGCreated, err = exclusive(r.CFGPath, []byte(expanded.CFG))
+	r.CFGCreated, r.CFGOwnership, err = createOwnedCFG(r.CFGPath, []byte(expanded.CFG))
 	if err != nil {
 		return r, errors.Join(err, s.Save())
 	}
@@ -451,34 +453,21 @@ func (s *Store) CleanupRun(in *Instance, r *Run) error {
 	if r.CFGRemoved {
 		return nil
 	}
-	st, err := os.Lstat(expected)
-	if errors.Is(err, os.ErrNotExist) {
-		if err = syncDirectory(filepath.Dir(expected)); err != nil {
-			return err
+	if !r.CFGCreated {
+		// O_EXCL failure never transfers ownership, even for identical content.
+		if _, e := os.Lstat(expected); !errors.Is(e, os.ErrNotExist) {
+			return fmt.Errorf("cfg was not created by this run; refusing removal")
 		}
 		r.CFGRemoved = true
 		return s.Save()
 	}
-	if err != nil {
+	if r.CFGOwnership == nil {
+		if _, e := os.Lstat(expected); !errors.Is(e, os.ErrNotExist) {
+			return fmt.Errorf("cfg ownership unavailable; preserve file for operator verification")
+		}
+	} else if err := cleanupOwnedCFG(expected, r.CFGOwnership, r.CFGDigest, s.cleanupHook); err != nil {
 		return err
 	}
-	if !st.Mode().IsRegular() {
-		return fmt.Errorf("cfg replaced by non-regular file")
-	}
-	b, err := os.ReadFile(expected)
-	if err != nil {
-		return err
-	}
-	if digest(b) != r.CFGDigest {
-		return fmt.Errorf("cfg changed; refusing removal")
-	}
-	if err = os.Remove(expected); err != nil {
-		return err
-	}
-	if err = syncDirectory(filepath.Dir(expected)); err != nil {
-		return err
-	}
-	r.CFGCreated = true
 	r.CFGRemoved = true
 	return s.Save()
 }
