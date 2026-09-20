@@ -34,6 +34,7 @@ type Manager struct {
 	options    Options
 	freeBytes  func(string) (uint64, error)
 	storage    storageStatus
+	spawn      func(engine.Spec) (engine.Identity, error)
 }
 type request struct {
 	ProtocolVersion int             `json:"protocolVersion"`
@@ -68,6 +69,7 @@ func OpenWithOptions(dir string, options Options) (*Manager, error) {
 		return nil, err
 	}
 	m := &Manager{store: s, workers: map[string]*worker{}, closed: make(chan struct{}), persist: s.Save, ports: options.Ports, options: options, freeBytes: records.FreeBytes}
+	m.spawn = engine.Start
 	if err = m.recover(); err != nil {
 		return nil, err
 	}
@@ -387,12 +389,18 @@ func (m *Manager) launch(id string, w *worker) {
 		m.mu.Unlock()
 		return
 	}
-	identity, err := engine.Start(engine.Spec{Executable: in.Snapshot.Executable, WorkingDirectory: in.Snapshot.WorkingDirectory, Arguments: r.Arguments, RunDirectory: r.Directory})
+	identity, err := m.spawn(engine.Spec{Executable: in.Snapshot.Executable, WorkingDirectory: in.Snapshot.WorkingDirectory, Arguments: r.Arguments, RunDirectory: r.Directory})
 	if identity.PID > 0 {
 		r.Identity = &identity
 		in.Process = "unknown"
 	}
 	if err != nil {
+		var rollback *engine.StartError
+		if errors.As(err, &rollback) && rollback.Exited {
+			in.Process = "stopped"
+			in.Room = "unknown"
+			r.StopResult = &engine.StopResult{Confirmed: true}
+		}
 		m.finish(in, w, "failed", fail("START_FAILED", "spawn", err.Error()))
 		m.mu.Unlock()
 		return

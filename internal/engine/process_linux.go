@@ -110,7 +110,10 @@ func readIdentity(pid int, run string) (Identity, error) {
 	return id, nil
 }
 
-func Start(s Spec) (result Identity, resultErr error) {
+func Start(s Spec) (Identity, error) {
+	return startWithIdentity(s, pidfdOpen, readIdentity, pidfdExited)
+}
+func startWithIdentity(s Spec, openFD func(int) (int, error), readID func(int, string) (Identity, error), exitedFD func(int) (bool, error)) (result Identity, resultErr error) {
 	candidate := Identity{Executable: s.Executable, Arguments: append([]string{s.Executable}, s.Arguments...), RunDirectory: s.RunDirectory}
 	if !filepath.IsAbs(s.Executable) || !filepath.IsAbs(s.WorkingDirectory) || !filepath.IsAbs(s.RunDirectory) {
 		return candidate, fmt.Errorf("absolute executable, working and run directories required")
@@ -132,7 +135,8 @@ func Start(s Spec) (result Identity, resultErr error) {
 		return candidate, ErrIdentity
 	}
 	defer func() {
-		if candidate.PID == 0 {
+		var rollback *StartError
+		if candidate.PID == 0 || (errors.As(resultErr, &rollback) && rollback.Exited) {
 			if cleanupErr := removeInput(fifo, uint64(createdInput.Dev), createdInput.Ino); cleanupErr != nil {
 				resultErr = errors.Join(resultErr, fmt.Errorf("unstarted FIFO cleanup: %w", cleanupErr))
 			}
@@ -161,7 +165,8 @@ func Start(s Spec) (result Identity, resultErr error) {
 		return candidate, e
 	}
 	defer output.Close()
-	cmd := exec.Command(s.Executable, s.Arguments...)
+	cmd := exec.Command(resolved, s.Arguments...)
+	cmd.Args[0] = s.Executable // Preserve the persisted argv contract; Path is resolved.
 	cmd.Dir = s.WorkingDirectory
 	cmd.Stdin = input
 	cmd.Stdout = output
@@ -171,20 +176,26 @@ func Start(s Spec) (result Identity, resultErr error) {
 		return candidate, e
 	}
 	candidate.PID = cmd.Process.Pid
-	go func() { _ = cmd.Wait() }() // Reap while this manager lives; never kill on exit.
-	pfd, e := pidfdOpen(candidate.PID)
+	defer func() {
+		if resultErr != nil {
+			resultErr = rollbackStart(cmd, resultErr)
+		} else {
+			go func() { _ = cmd.Wait() }()
+		}
+	}()
+	pfd, e := openFD(candidate.PID)
 	if e != nil {
 		return candidate, e
 	}
 	defer syscall.Close(pfd)
-	actual, e := readIdentity(candidate.PID, s.RunDirectory)
+	actual, e := readID(candidate.PID, s.RunDirectory)
 	if e != nil {
 		return candidate, e
 	}
 	if actual.Executable != candidate.Executable || !reflect.DeepEqual(actual.Arguments, candidate.Arguments) || actual.InputDevice != candidate.InputDevice || actual.InputInode != candidate.InputInode {
 		return candidate, ErrIdentity
 	}
-	exited, e := pidfdExited(pfd)
+	exited, e := exitedFD(pfd)
 	if e != nil {
 		return candidate, e
 	}

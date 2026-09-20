@@ -49,6 +49,9 @@ func nativeIdentity(handle syscall.Handle, pid int) (Identity, error) {
 }
 
 func Start(spec Spec) (Identity, error) {
+	return startWithIdentity(spec, syscall.OpenProcess, nativeIdentity)
+}
+func startWithIdentity(spec Spec, openProcess func(uint32, bool, uint32) (syscall.Handle, error), readID func(syscall.Handle, int) (Identity, error)) (Identity, error) {
 	executable, err := filepath.EvalSymlinks(spec.Executable)
 	if err != nil {
 		return Identity{}, err
@@ -78,18 +81,21 @@ func Start(spec Spec) (Identity, error) {
 		return Identity{}, err
 	}
 	candidate := Identity{PID: cmd.Process.Pid, Executable: executable, Arguments: append([]string{}, spec.Arguments...), RunDirectory: spec.RunDirectory}
-	h, err := syscall.OpenProcess(0x1000|0x100000|1, false, uint32(candidate.PID))
+	h, err := openProcess(0x1000|0x100000|1, false, uint32(candidate.PID))
 	if err == nil {
 		var id Identity
-		id, err = nativeIdentity(h, candidate.PID)
+		id, err = readID(h, candidate.PID)
 		syscall.CloseHandle(h)
 		if err == nil {
 			candidate.CreationTime = id.CreationTime
 			candidate.Executable = id.Executable
 		}
 	}
+	if err != nil {
+		return candidate, rollbackStart(cmd, err)
+	}
 	go func() { _ = cmd.Wait() }()
-	return candidate, err
+	return candidate, nil
 }
 
 func Open(id Identity) (*Handle, error) {
