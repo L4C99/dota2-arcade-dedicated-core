@@ -123,6 +123,11 @@ func (s *Store) validateState() error {
 					return fmt.Errorf("process argv mismatch")
 				}
 			}
+			if input := r.InputOwnership; input != nil {
+				if !r.SpawnAttempted || input.PID != 0 || input.InputInode == 0 || input.RunDirectory != dir || !cleanAbsolute(input.Executable) {
+					return fmt.Errorf("invalid input ownership")
+				}
+			}
 			if r.Evidence != nil {
 				ev := r.Evidence
 				if ev.Generation != r.Generation || ev.Source != r.LogPath || ev.ObservedAt.IsZero() {

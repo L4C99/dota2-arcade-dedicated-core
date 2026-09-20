@@ -10,10 +10,11 @@ var ErrGone = errors.New("recorded process has exited")
 var ErrIdentity = errors.New("process identity could not be verified")
 
 type Spec struct {
-	Executable       string   `json:"executable"`
-	WorkingDirectory string   `json:"workingDirectory"`
-	Arguments        []string `json:"arguments"`
-	RunDirectory     string   `json:"runDirectory"`
+	Executable       string               `json:"executable"`
+	WorkingDirectory string               `json:"workingDirectory"`
+	Arguments        []string             `json:"arguments"`
+	RunDirectory     string               `json:"runDirectory"`
+	InputPrepared    func(Identity) error `json:"-"`
 }
 
 // Identity is persisted before control operations. Platform fields are exact

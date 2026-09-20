@@ -160,6 +160,11 @@ func startWithIdentity(s Spec, openFD func(int) (int, error), readID func(int, s
 	}
 	candidate.InputDevice = uint64(inputStat.Dev)
 	candidate.InputInode = inputStat.Ino
+	if s.InputPrepared != nil {
+		if e = s.InputPrepared(candidate); e != nil {
+			return candidate, e
+		}
+	}
 	output, e := os.OpenFile(filepath.Join(s.RunDirectory, "output.log"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if e != nil {
 		return candidate, e

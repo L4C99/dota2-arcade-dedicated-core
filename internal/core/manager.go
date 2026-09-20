@@ -390,14 +390,17 @@ func (m *Manager) launch(id string, w *worker) {
 		m.mu.Unlock()
 		return
 	}
-	identity, err := m.spawn(engine.Spec{Executable: in.Snapshot.Executable, WorkingDirectory: in.Snapshot.WorkingDirectory, Arguments: r.Arguments, RunDirectory: r.Directory})
+	identity, err := m.spawn(engine.Spec{Executable: in.Snapshot.Executable, WorkingDirectory: in.Snapshot.WorkingDirectory, Arguments: r.Arguments, RunDirectory: r.Directory, InputPrepared: func(input engine.Identity) error {
+		r.InputOwnership = &input
+		return m.save() // Must be durable before the child can inherit the FIFO.
+	}})
 	if identity.PID > 0 {
 		r.Identity = &identity
 		in.Process = "unknown"
 	}
 	if err != nil {
 		var rollback *engine.StartError
-		if errors.As(err, &rollback) && rollback.Exited {
+		if identity.PID == 0 || (errors.As(err, &rollback) && rollback.Exited) {
 			in.Process = "stopped"
 			in.Room = "unknown"
 			r.StopResult = &engine.StopResult{Confirmed: true}
@@ -665,12 +668,22 @@ func (m *Manager) stopOrRestart(id string, w, old *worker) {
 		return
 	}
 	for _, run := range in.Runs {
-		if run.Identity != nil && !run.InputRemoved {
+		input := run.InputOwnership
+		if input == nil {
+			input = run.Identity
+		} // Earlier format-2 complete identities.
+		if input != nil && !run.InputRemoved {
 			cleanup := engine.CleanupInput
+			if run.Identity != nil {
+				input = run.Identity
+			}
 			if run.StopResult != nil && run.StopResult.Confirmed {
 				cleanup = engine.CleanupConfirmedInput
+				if run.InputOwnership != nil {
+					input = run.InputOwnership
+				}
 			}
-			if err := cleanup(*run.Identity); err != nil {
+			if err := cleanup(*input); err != nil {
 				in.Cleanup = "failed"
 				m.finish(in, w, "failed", fail("CLEANUP_FAILED", "cleanup", err.Error()))
 				m.mu.Unlock()

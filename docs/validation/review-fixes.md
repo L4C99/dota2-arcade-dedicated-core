@@ -23,3 +23,5 @@ CJ-01实际Windows命令（Go1.27.1）：go test ./internal/core ./internal/engi
 CJ-02：写入UpdatedAt/FinishedAt采用当前墙钟与已有记录时间最大值，未删除完整性校验、未改变启动截止时间/进程身份。Windows go test ./internal/core -run TestBackwardClock -count=1通过，覆盖回拨后restart/finish/stop、watch、future intent recovery、reopen/status/create。CJ-01修复提交2e4dbad；Linux全套待执行。
 
 CJ-02提交a9e3817。CJ-03新增format2可选cfgOwnership，checksum覆盖；旧记录可打开，但现存文件无ownership或CFGCreated=false拒绝删除。Windows按原句柄删除并禁止delete-sharing；Linux固定父目录，私有随机暂存后复核对象/内容，遇到交换保留并尝试无覆盖恢复；未知崩溃残留不猜测删除。Windows records全套通过；Linux Go1.27.1普通用户原生 go test -mod=vendor ./internal/engine ./internal/core ./internal/records -run 'TestStart|TestBackwardClock|TestCFG|TestCleanupUnrecorded' -count=1通过，覆盖CJ01—03新增用例。Linux工具链官方直连失败后经本机下载传入，未动游戏。新增测试覆盖同内容不归属、旧格式、父目录替换、symlink/junction及核验后交换；拒绝后可显式重试。
+
+CJ-03提交446efcb。CJ-04：spawn前durable InputOwnership，仍为format2可选字段；恢复没有进程身份但已确认退出时按输入inode/device清理，不放宽未知FIFO白名单。Windows core/records全套通过；Linux普通用户 core/records/engine全套 -count=1通过（含新TestOrphanFIFOIdentityGapExpires、TestUnknownFIFORetentionRefused），证明身份未写/child退出→reopen→stop→prune，外来FIFO仍拒绝。仅helper自动测试，真实Dota回收待验收。

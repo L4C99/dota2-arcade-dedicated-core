@@ -51,6 +51,7 @@ type Run struct {
 	CFGCreated      bool               `json:"cfgCreated"`
 	CFGRemoved      bool               `json:"cfgRemoved"`
 	InputRemoved    bool               `json:"inputRemoved"`
+	InputOwnership  *engine.Identity   `json:"inputOwnership,omitempty"`
 	Identity        *engine.Identity   `json:"identity"`
 	Evidence        *engine.Evidence   `json:"evidence"`
 	Bindings        []engine.Binding   `json:"bindings"`
