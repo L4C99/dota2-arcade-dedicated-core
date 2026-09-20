@@ -2,19 +2,19 @@
 
 唯一任务单：用户提供的汇总裁决，固定基线7bcbdb72dad5dc44c4c0a88fdad6a1c0fb3d38a1。开工工作树干净、HEAD一致。原始四份报告仅供证据查阅。本轮处理CJ-01—CJ-11，不纳入疑似、否决或可选项；此前M0—M4验收不代表修复候选已复验。
 
-| 裁决项 | 级别 | 修复/验证状态 | 实机责任 |
-| --- | --- | --- | --- |
-| CJ-01 | P1，阻塞 | spawn身份失败用创建时Process回滚，确认退出才允许回收；Linux执行resolved路径，argv契约不变。Windows定向TestStart通过；Linux与全套待执行 | 双平台真实create/ready/restart/stop待验收 |
-| CJ-02 | P1，阻塞 | 待处理 | 可控clock自动回归，不改系统时间 |
-| CJ-03 | P2，阻塞 | 待处理 | 双平台原生文件系统回归 |
-| CJ-04 | P2 | 待处理 | Linux原生FIFO恢复；真实引擎回收待验收 |
-| CJ-05 | P2 | 待处理 | 有界维护公平性自动测试 |
-| CJ-06 | P2 | 待处理 | 可控日志/helper自动回归 |
-| CJ-07 | P2 | 待处理；用户已确认下述规则 | 双平台原生socket及真实bindings待验收 |
-| CJ-08 | P3 | 待处理 | CLI/协议自动回归 |
-| CJ-09 | P3 | 待处理 | 状态/磁盘优先级自动回归 |
-| CJ-10 | P3 | 待处理 | 分路径磁盘注入自动回归 |
-| CJ-11 | P3 | 待处理 | Windows原生路径及隔离A2S待验收 |
+| 裁决项 | 级别 | 修复提交 | 自动回归及当前结果 | 待实机复验 |
+| --- | --- | --- | --- | --- |
+| CJ-01 | P1，阻塞 | 2e4dbad、fee0db3 | 双平台post-spawn故障注入；core部分身份回滚；Windows定向通过，补核后最终全套待跑 | Windows/Linux真实create→ready→restart→ready→stop |
+| CJ-02 | P1，阻塞 | a9e3817 | 双平台可控回拨、watch/finish/recovery、reopen/stop/create通过 | 不需要客户端或修改系统时钟 |
+| CJ-03 | P2，阻塞 | 446efcb、77a554b | 双平台文件/父目录替换、核验后交换、junction/symlink、旧format2、拒绝后重试通过；追加O_EXCL同内容Windows通过 | 不要求真实游戏；追加测试Linux最终回归待跑 |
+| CJ-04 | P2 | 303f0fe | Linux身份未写+child退出→recover→stop→prune通过；未知FIFO仍拒绝 | Linux真实失败启动/回收及正常重启闭环 |
+| CJ-05 | P2 | cccb9b4 | 双平台17项失败前缀轮转与恢复重试通过 | 无 |
+| CJ-06 | P2 | 6043064、48ca073 | 双平台ready后日志/失败规则/binding异常、重复写入次数通过；症状消失补核Windows通过 | 不要求玩家；补核后Linux最终回归待跑 |
+| CJ-07 | P2 | c3b1db2 | 双平台原生extra TCP/UDP/出站helper、冲突矩阵及双实例隔离通过；矩阵使用受控表注入，未冒称实际重复TCP绑定 | 双平台真实bindings无误报，纳入总体进房回归 |
+| CJ-08 | P3 | 0cbb23f | 双平台CLI真实IPC与protocol错误码/阶段通过 | 无 |
+| CJ-09 | P3 | ca7ba61 | 双平台低磁盘+busy/reclaimed及正常restart通过 | 无 |
+| CJ-10 | P3 | 5720060 | 双平台按路径模拟不同卷余量、受理前零记录及原键重试/stop通过 | 无 |
+| CJ-11 | P3 | edcaad5 | Windows case/dot/8.3（均未跳过）、symlink/junction及A2S全套通过；Linux原有分支全套通过 | Windows隔离安装a2s enable+实际A2S_INFO |
 
 CJ-07用户确认：额外TCP监听、UDP服务端口参与跨实例检查；相同协议/端口且监听地址重叠报告冲突、房间不再ready；不自动杀房或换端口。普通UDP出站临时端点只诊断，无法区分用途时明确诊断不假称已检查。具体可判定依据在实现前记录。
 
@@ -45,3 +45,28 @@ CJ-01补核：rollback的Wait必须产出ProcessState才标Exited=true，避免�
 CJ-06补核：已经failed的生命周期即使下一次日志或binding症状消失也不能重新ready；保持原错误直到显式回收。Windows TestObservedFailure三类各追加症状消失检查通过。
 
 CJ-03追加直接O_EXCL碰撞回归：事先创建同名、字节完全一致cfg→PrepareRun失败且不取得ownership→CleanupRun拒绝，外来文件未变。Windows TestPrepareConflictSameContentNeverOwnsCFG通过。CJ-01补核fee0db3；CJ-06补核48ca073。
+
+
+## 全套验证与新增阻塞
+
+- Windows Go1.27.1：go test ./... -count=1、go vet ./...通过（CJ07代码快照）。默认go test -race在进入测试前均0xc0000139；现有MinGW8.1与默认链接组合不兼容。改用go test -race -ldflags=-linkmode=external ./... -count=1后完整通过，未关闭race或跳过用例。其后的CJ01/CJ06边界补核已定向通过，需在最终固定候选再跑全套。
+- Ubuntu24普通用户Go1.27.1：go test -mod=vendor -race ./... -count=1全部通过（CJ07代码快照）；普通全套test在engine的TestLinuxLifecycleAndIdentity报permission denied，其余包通过，因此未执行串接的vet，不标全套通过。
+- 同环境原始固定7bcbdb7，TestLinuxLifecycleAndIdentity -count=100出现15次同样失败。退出过程中的/proc身份读取与pidfd退出可读存在窗口；保持原失败证据，未改测试标准。该项不在裁决任务单内，已经单独请求用户是否授权追加处理；未获确认前不修改。即便某次race或单次test成功，也不能消除这个已复现的阻塞。
+- Linux编译器只在授权的新隔离机安装，0个包升级、无服务重启；旧生产机与本机系统配置未改动。原始报告、工具链、测试原始结果均留在ignored local/review及隔离机项目review目录，不上传地图/凭据。
+
+暂停状态：用户因移动电脑要求暂停。本轮代码候选77a554b；Linux裁决外问题用户答复‘等我稍后决定’，未授权追加修复。真实专服/客户端复验尚未进行，不得沿用旧验收结论。当前仅暂停，不改变任务范围、严重程度或待决事项。私有接续说明local/review/PAUSED.md。
+
+## 关机前最终收尾（2026-09-20）
+
+固定代码候选77a554b5aa88fc639998b22c4aff676e94682ff7的最终测试已全部结束，上文“待跑/进行中”为历史记录，以本节为最新结果：
+
+| 平台 | 普通全套 test | vet | 全套 race |
+| --- | --- | --- | --- |
+| Windows | 通过 | 通过 | 失败：TestMultipleAutomaticInstancesStayIndependent/different-templates，multi_test.go:66，NO_PORT_AVAILABLE |
+| Ubuntu | 失败：TestBackwardClockRecoveryAndWatch，time_test.go:51，创建阶段 START_FAILED / recorded process has exited | 通过 | 通过 |
+
+Windows race实际使用外部链接，日志未出现数据竞争报告，但测试失败，不能标通过。Linux本次失败发生在CJ-02测试的初始创建阶段，根因尚未调查，不得与此前待授权的/proc权限问题混为一谈。CJ-03追加用例所在records包本次双平台通过；CJ-01/CJ-06补核用例本次未报告失败，但不能据此将整体验收标通过。
+
+两项新失败均保留，恢复后先调查，不跳过、不降低断言、不因早一轮通过而忽略。本轮仍未完成真实专服/客户端复验，不建议发布。Linux裁决外追加修复继续等待用户决定。
+
+全部原始日志与退出码已保存到本地ignored local/review/final-windows-*、final-linux-*。只读检查确认本机无go/*.test/d2core/dota2进程，隔离机d2coretest用户无进程，项目manager服务inactive。未关停或修改无关资源。任务因用户移动电脑暂停，代码提交仅本地，未push或发布。
