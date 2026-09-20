@@ -182,12 +182,14 @@ func (m *Manager) dispatch(req request) (any, *records.Failure) {
 		if m.writeError != nil {
 			return nil, classify(m.writeError, "persist")
 		}
-		if _, retry := m.store.State.Keys[p.Key]; !retry {
-			if f := m.checkSpace(m.store.Dir); f != nil {
-				return nil, f
+		in, op, err := m.store.CreateChecked(p.Template, p.Port, p.Key, m.ports, func(snapshot config.Template) error {
+			for _, path := range []string{m.store.Dir, snapshot.CFG.Directory} {
+				if f := m.checkSpace(path); f != nil {
+					return f
+				}
 			}
-		}
-		in, op, err := m.store.CreateInRange(p.Template, p.Port, p.Key, m.ports)
+			return nil
+		})
 		if err != nil {
 			var uncertain *records.DurabilityError
 			if errors.As(err, &uncertain) {

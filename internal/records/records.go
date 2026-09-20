@@ -309,6 +309,12 @@ func (s *Store) Create(path string, port int, key string) (*Instance, *Operation
 }
 
 func (s *Store) CreateInRange(path string, port int, key string, ports PortRange) (*Instance, *Operation, error) {
+	return s.CreateChecked(path, port, key, ports, nil)
+}
+
+// check runs against the exact normalized snapshot, only for a new intention,
+// before allocating or persisting. Retries never reread or revalidate resources.
+func (s *Store) CreateChecked(path string, port int, key string, ports PortRange, check func(config.Template) error) (*Instance, *Operation, error) {
 	if err := ValidateKey(key); err != nil {
 		return nil, nil, &Failure{Code: "INVALID_REQUEST", Stage: "validate", Message: err.Error()}
 	}
@@ -325,6 +331,11 @@ func (s *Store) CreateInRange(path string, port int, key string, ports PortRange
 	t, err := config.Load(path)
 	if err != nil {
 		return nil, nil, err
+	}
+	if check != nil {
+		if err = check(t); err != nil {
+			return nil, nil, err
+		}
 	}
 	// Fingerprint retains requested port 0 for automatic intent; the selected
 	// port is saved on the instance and never reselected on a retry.
