@@ -1,6 +1,6 @@
-# 双平台开发交付包
+# 双平台交付包
 
-当前为开发验收包，尚非正式发布。M2整机重启与M4完整验收未通过前不得用于正式接管生产。目标为已测试的Windows 10 x64、Ubuntu 24 x64；包中不包含游戏、地图、运行库或凭据，不提供许可证。
+M0—M4既定范围已验收。交付包用于独立部署；迁移或接管现有生产房间须另行确认。目标为已测试的Windows 10 x64、Ubuntu 24 x64；包中不包含游戏、地图、运行库或凭据，不提供许可证。
 
 每个平台ZIP包含d2core、launcher-example、BUILD.json、平台模板、协议和操作说明；附独立.sha256校验文件。运行两个可执行文件不需要Go、Python或PowerShell。M0实验说明仅供参考，实验脚本可在源码仓库取得，不是产品运行依赖。
 
@@ -25,4 +25,4 @@ go run ./tools/package --go <Go绝对路径> --output dist --build-time <本次�
 
 build-time可省略并使用实际当前时间；复现同一包时必须传入原BUILD.json的buildTime。sourceTime与buildTime分别记录提交时间和构建时间。程序拒绝脏工作树，使用固定文件清单、GOARCH=amd64、CGO_ENABLED=0、trimpath、稳定归档顺序和时间；不包含local、data、VPK、私钥或原始日志。已存在的输出不覆盖。构建/归档失败可能留下无校验文件的不完整产物，应核对后清理或改用新的输出目录。
 
-交叉构建只是生成文件，不能代替目标平台实机运行。CI只做辅助测试与构建；不自动连接测试主机、不运行Dota、不创建GitHub Release。完整交付需汇总M0—M4真实证据后另行记录。
+交叉构建只是生成文件，不能代替目标平台实机运行。CI只做辅助测试与构建；不自动连接测试主机、不运行Dota、不创建GitHub Release。M0—M4真实证据见validation目录。GitHub源码推送、交付包生成与GitHub Release发布分别记录，当前未创建GitHub Release。

@@ -122,7 +122,7 @@ func run() error {
 			}
 			files[target.name+suffix] = path
 		}
-		manifest, _ := json.MarshalIndent(map[string]any{"gitCommit": commit, "sourceTime": when.Format(time.RFC3339), "buildTime": builtAt.Format(time.RFC3339), "goVersion": "1.27.1", "os": platform, "arch": "amd64", "status": "development; final acceptance pending M2 reboot and M4 verification"}, "", "  ")
+		manifest, _ := json.MarshalIndent(map[string]any{"gitCommit": commit, "sourceTime": when.Format(time.RFC3339), "buildTime": builtAt.Format(time.RFC3339), "goVersion": "1.27.1", "os": platform, "arch": "amd64", "status": "local build; acceptance scope and evidence in docs/validation/m4.md"}, "", "  ")
 		mp := filepath.Join(stage, platform+"-BUILD.json")
 		if e = os.WriteFile(mp, manifest, 0600); e != nil {
 			return e
