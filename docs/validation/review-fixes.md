@@ -43,3 +43,5 @@ CJ-11提交edcaad5。CJ-07规则按用户确认落地：portCheck公开complete/
 CJ-01补核：rollback的Wait必须产出ProcessState才标Exited=true，避免等待API错误被当成退出；core回归现在明确返回缺少creation/boot/tick的partial identity，仍确认真实child已退出且stop可收敛。Windows TestStart定向通过。
 
 CJ-06补核：已经failed的生命周期即使下一次日志或binding症状消失也不能重新ready；保持原错误直到显式回收。Windows TestObservedFailure三类各追加症状消失检查通过。
+
+CJ-03追加直接O_EXCL碰撞回归：事先创建同名、字节完全一致cfg→PrepareRun失败且不取得ownership→CleanupRun拒绝，外来文件未变。Windows TestPrepareConflictSameContentNeverOwnsCFG通过。CJ-01补核fee0db3；CJ-06补核48ca073。

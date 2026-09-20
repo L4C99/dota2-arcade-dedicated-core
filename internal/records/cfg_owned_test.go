@@ -1,11 +1,37 @@
 package records
 
 import (
+	"fmt"
+	"github.com/L4C99/dota2-arcade-dedicated-core/internal/config"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 )
+
+func TestPrepareConflictSameContentNeverOwnsCFG(t *testing.T) {
+	s, path := setup(t)
+	in := create(t, s, path, availablePort(t), "preexisting")
+	name := fmt.Sprintf("d2core_%s_g1.cfg", in.ID)
+	log := filepath.Join(s.Dir, "instances", in.ID, "runs", "000001", "engine.log")
+	expanded, e := config.Expand(in.Snapshot, config.Values{InstanceID: in.ID, CfgName: name, LogPath: log, GamePort: in.Port})
+	if e != nil {
+		t.Fatal(e)
+	}
+	file := filepath.Join(in.Snapshot.CFG.Directory, name)
+	mustWrite(t, file, []byte(expanded.CFG))
+	r, e := s.PrepareRun(in)
+	if e == nil || r.CFGCreated || r.CFGOwnership != nil {
+		t.Fatal("conflict adopted", e)
+	}
+	if e = s.CleanupRun(in, r); e == nil {
+		t.Fatal("preexisting identical cfg accepted for deletion")
+	}
+	b, e := os.ReadFile(file)
+	if e != nil || string(b) != expanded.CFG {
+		t.Fatal("foreign file changed", e)
+	}
+}
 
 func TestCFGOwnershipReplacementAndRace(t *testing.T) {
 	for _, mode := range []string{"file", "parent", "during-file", "during-parent", "link"} {
