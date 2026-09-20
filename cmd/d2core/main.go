@@ -24,14 +24,47 @@ import (
 	"github.com/L4C99/dota2-arcade-dedicated-core/internal/records"
 )
 
-var buildTime = "unknown" // Set with -ldflags at packaging time, not the commit timestamp.
+var buildTime = "unknown"        // Set with -ldflags at packaging time, not the commit timestamp.
+var releaseVersion = "0.1.0-dev" // Set by the release packager; source builds retain the development marker.
+
+const commandHelp = `Usage: d2core <command> [options]
+
+Commands:
+  version                         Build, commit and protocol versions
+  check --template ABS            Static template validation only
+  serve                           Run the local manager in the foreground
+  create --template ABS --idempotency-key KEY [--port N]
+                                  Create a room; poll the returned operation ID
+  list                            Active and failed instances, storage status
+  status INSTANCE                 Current instance state
+  operation OPERATION             Asynchronous operation result
+  logs INSTANCE [--tail N] [--generation N]
+                                  Engine log, optionally from a prior generation
+  restart INSTANCE                Restart using the saved template and port
+  stop INSTANCE                   Stop and reclaim, including failed instances
+  a2s enable --dota-dir ABS        Explicitly configure gameinfo Advertise
+  m0-inspect [resource options]    Optional read-only development diagnostics
+
+Manager commands accept --data-dir ABS and --json (JSON is the default).
+serve options: --port-min 27015 --port-max 27064 --history-days 7 --min-free-mib 1024
+create: port 0 or omitted selects automatically; a new intent needs a new key.
+logs: --tail defaults to 100 (1..1000); --generation 0 selects the latest.
+Use d2core <command> --help or d2core help <command> for parameter details.
+For A2S details use d2core a2s enable --help. m0-inspect does not accept --json.
+Ctrl+C exits the manager without stopping games. Use stop to reclaim a room.
+See docs/operations.md for environment setup, resource layout and examples.`
 
 type usageError struct{ error }
+
+func (e usageError) Unwrap() error { return e.error }
 
 func usage(format string, args ...any) error { return usageError{fmt.Errorf(format, args...)} }
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return
+		}
 		fmt.Fprintln(os.Stderr, err)
 		var u usageError
 		if errors.As(err, &u) {
@@ -43,7 +76,26 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return usage("usage: d2core check --template ABS [--json] | version [--json] | m0-inspect [resource options]")
+		return usage("%s", commandHelp)
+	}
+	if args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
+		if len(args) == 1 {
+			fmt.Fprintln(os.Stdout, commandHelp)
+			return nil
+		}
+		if args[0] == "help" {
+			switch args[1] {
+			case "version", "check", "serve", "create", "list", "status", "operation", "logs", "restart", "stop", "m0-inspect":
+				if len(args) == 2 {
+					return run([]string{args[1], "--help"})
+				}
+			case "a2s":
+				if len(args) == 2 || len(args) == 3 && args[2] == "enable" {
+					return run([]string{"a2s", "enable", "--help"})
+				}
+			}
+		}
+		return usage("use d2core help or d2core help <command>")
 	}
 	switch args[0] {
 	case "a2s":
@@ -106,7 +158,7 @@ func run(args []string) error {
 		if f.NArg() != 0 {
 			return usage("version accepts no positional arguments")
 		}
-		v := map[string]any{"version": "0.1.0-dev", "gitCommit": "unknown", "buildTime": buildTime, "schemaVersion": 1, "formatVersion": records.FormatVersion, "protocolVersion": 1}
+		v := map[string]any{"version": releaseVersion, "gitCommit": "unknown", "buildTime": buildTime, "schemaVersion": 1, "formatVersion": records.FormatVersion, "protocolVersion": 1}
 		if info, ok := debug.ReadBuildInfo(); ok {
 			v["goVersion"] = info.GoVersion
 			for _, s := range info.Settings {

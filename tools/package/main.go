@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -36,9 +37,13 @@ func run() error {
 	goTool := flag.String("go", "go", "Go 1.27.1 binary")
 	out := flag.String("output", "dist", "archive output directory")
 	buildStamp := flag.String("build-time", "", "RFC3339 build timestamp; supply the same value for reproducible rebuilds")
+	release := flag.String("version", "0.1.0-dev", "release version without v, e.g. 0.1.0-rc.2")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		return fmt.Errorf("unexpected arguments")
+	}
+	if !regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-dev|-rc\.[1-9][0-9]*)?$`).MatchString(*release) {
+		return fmt.Errorf("version must be X.Y.Z, X.Y.Z-dev or X.Y.Z-rc.N")
 	}
 	root, e := command("git", "rev-parse", "--show-toplevel")
 	if e != nil {
@@ -104,6 +109,7 @@ func run() error {
 		}
 	}()
 	common := []string{"README.md", "docs/delivery.md", "docs/operations.md", "docs/local-api.md", "docs/a2s.md", "docs/decisions.md", "docs/roadmap.md", "docs/validation/m0.md", "docs/validation/m1.md", "docs/validation/m2.md", "docs/validation/m2-reboot.md", "docs/validation/m3.md", "docs/validation/m4.md", "examples/README.md", "examples/template.windows.json", "examples/template.linux.json", "examples/launcher/README.md", "examples/launcher/main.go", "tools/m0/README.md"}
+	common = append(common, "docs/validation/rc1-smoke.md", "docs/validation/rc2-commands.md", "docs/validation/review-fixes.md")
 	for _, platform := range []string{"windows", "linux"} {
 		suffix := ""
 		if platform == "windows" {
@@ -115,20 +121,23 @@ func run() error {
 		}
 		for _, target := range []struct{ name, pkg string }{{"d2core", "./cmd/d2core"}, {"launcher-example", "./examples/launcher"}} {
 			path := filepath.Join(stage, platform+"-"+target.name+suffix)
-			c := exec.Command(*goTool, "build", "-trimpath", "-buildvcs=true", "-ldflags=-X main.buildTime="+builtAt.Format(time.RFC3339), "-o", path, target.pkg)
+			c := exec.Command(*goTool, "build", "-trimpath", "-buildvcs=true", "-ldflags=-X main.buildTime="+builtAt.Format(time.RFC3339)+" -X main.releaseVersion="+*release, "-o", path, target.pkg)
 			c.Env = append(os.Environ(), "GOOS="+platform, "GOARCH=amd64", "CGO_ENABLED=0", "GOTOOLCHAIN=local")
 			if b, e := c.CombinedOutput(); e != nil {
 				return fmt.Errorf("build %s/%s: %w %s", platform, target.name, e, b)
 			}
 			files[target.name+suffix] = path
 		}
-		manifest, _ := json.MarshalIndent(map[string]any{"gitCommit": commit, "sourceTime": when.Format(time.RFC3339), "buildTime": builtAt.Format(time.RFC3339), "goVersion": "1.27.1", "os": platform, "arch": "amd64", "status": "local build; acceptance scope and evidence in docs/validation/m4.md"}, "", "  ")
+		manifest, _ := json.MarshalIndent(map[string]any{"version": *release, "gitCommit": commit, "sourceTime": when.Format(time.RFC3339), "buildTime": builtAt.Format(time.RFC3339), "goVersion": "1.27.1", "os": platform, "arch": "amd64", "status": "built; artifact validation recorded separately"}, "", "  ")
 		mp := filepath.Join(stage, platform+"-BUILD.json")
 		if e = os.WriteFile(mp, manifest, 0600); e != nil {
 			return e
 		}
 		files["BUILD.json"] = mp
 		name := "d2core-" + commit[:12] + "-" + platform + "-amd64.zip"
+		if *release != "0.1.0-dev" {
+			name = "d2core-v" + *release + "-" + platform + "-amd64.zip"
+		}
 		path := filepath.Join(abs, name)
 		if e = archive(path, files, builtAt); e != nil {
 			return e

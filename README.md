@@ -23,6 +23,8 @@ go run ./cmd/d2core m0-inspect
 
 ## 文档
 
+RC.1 两平台本轮单房间产物烟测已由用户确认通过，详见 [烟测记录与包外勘误](docs/validation/rc1-smoke.md)。原 RC.1 包及 tag 保持不变，未发布正式生产 Release。
+
 - [开发路线图](docs/roadmap.md)：阶段目标和验收标准。
 - [技术决策](docs/decisions.md)：实现约束与后续验证责任。
 - [M0 验证报告](docs/validation/m0.md)：环境、结果、限制和复验流程。
@@ -42,4 +44,6 @@ go run ./cmd/d2core m0-inspect
 - 跨机器连接需要两端能解析同一 addon 标识，并使用匹配资源；服务器绝对路径不等于客户端可用路径。
 - 已验证的地图与平台组合不代表任意地图兼容。资源准备和更新由使用者或上层程序负责。
 
-仓库不包含游戏安装、地图包、凭据或原始玩家日志。当前未提供许可证；构建版本为0.1.0-dev，尚未创建GitHub Release。
+仓库不包含游戏安装、地图包、凭据或原始玩家日志。当前未提供许可证；源码构建默认为0.1.0-dev，候选打包会注入版本标识，尚未创建GitHub Release。
+
+RC.2 帮助/版本修正及发布包命令验收范围见 [命令矩阵](docs/validation/rc2-commands.md)。

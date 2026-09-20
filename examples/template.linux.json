@@ -3,18 +3,39 @@
   "name": "example",
   "executable": "/opt/dota2/game/bin/linuxsteamrt64/dota2",
   "workingDirectory": "/opt/dota2/game",
-  "arguments": ["-dedicated", "-allow_no_lobby_connect", "-ip", "0.0.0.0", "-port", "{{game_port}}", "-con_logfile", "{{log_path}}", "+exec", "{{cfg_name}}"],
+  "arguments": [
+    "-dedicated",
+    "-allow_no_lobby_connect",
+    "-ip",
+    "0.0.0.0",
+    "-port",
+    "{{game_port}}",
+    "-con_logfile",
+    "{{log_path}}",
+    "+exec",
+    "{{cfg_name}}"
+  ],
   "cfg": {
     "directory": "/opt/dota2/game/dota/cfg",
     "lines": [
       "hostname \"{{instance_id}}\"",
-      "map example_map gamemode=15 customgamemode=\"sample_addon.vpk\" nomapvalidation=1",
+      "map example_map gamemode=15 customgamemode=\"REPLACE_WITH_WORKSHOP_ID\" nomapvalidation=1",
       "sv_hibernate_when_empty 0"
     ]
   },
   "readiness": {
-    "successAll": ["REPLACE_WITH_VERIFIED_MAP_LOAD_SIGNAL", "REPLACE_WITH_VERIFIED_HOST_ACTIVATE_SIGNAL", "REPLACE_WITH_VERIFIED_MAP_COMMAND_READY_SIGNAL"],
-    "failureAny": ["REPLACE_WITH_VERIFIED_MAP_LOAD_FAILURE_SIGNAL"]
+    "successAll": [
+      "REPLACE_WITH_VERIFIED_MAP_LOAD_SIGNAL",
+      "REPLACE_WITH_VERIFIED_HOST_ACTIVATE_SIGNAL",
+      "REPLACE_WITH_VERIFIED_MAP_COMMAND_READY_SIGNAL"
+    ],
+    "failureAny": [
+      "REPLACE_WITH_VERIFIED_MAP_LOAD_FAILURE_SIGNAL"
+    ]
   },
-  "timeouts": {"startupSeconds": 120, "stopSeconds": 10, "forceSeconds": 5}
+  "timeouts": {
+    "startupSeconds": 120,
+    "stopSeconds": 10,
+    "forceSeconds": 5
+  }
 }

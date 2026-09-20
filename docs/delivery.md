@@ -20,7 +20,7 @@ A2S是显式独立工具，见a2s.md。仅在隔离配置上验证，不能将�
 固定Go 1.27.1，使用干净Git工作树，在仓库根执行：
 
 ```text
-go run ./tools/package --go <Go绝对路径> --output dist --build-time <本次构建UTC时间，RFC3339>
+go run ./tools/package --go <Go绝对路径> --output dist --version 0.1.0-rc.2 --build-time <本次构建UTC时间，RFC3339>
 ```
 
 build-time可省略并使用实际当前时间；复现同一包时必须传入原BUILD.json的buildTime。sourceTime与buildTime分别记录提交时间和构建时间。程序拒绝脏工作树，使用固定文件清单、GOARCH=amd64、CGO_ENABLED=0、trimpath、稳定归档顺序和时间；不包含local、data、VPK、私钥或原始日志。已存在的输出不覆盖。构建/归档失败可能留下无校验文件的不完整产物，应核对后清理或改用新的输出目录。
@@ -33,11 +33,17 @@ build-time可省略并使用实际当前时间；复现同一包时必须传入�
 
 包内BUILD.json记录真实构建提交、UTC时间、Go1.27.1及目标平台。现有程序version.version固定为0.1.0-dev，本阶段禁止产品代码修改，因此不伪改此字段；RC版本以远端v0.1.0-rc.1 tag和随包RC-MANIFEST.json为准。核验程序gitCommit等于tag指向提交和BUILD.json.gitCommit、gitDirty=false、buildTime一致。BUILD.json.status沿用工具的local build标记，不能视为RC产物已通过真实环境烟测。原有代码实机验收不替代新ZIP烟测。
 
-发布产物烟测由使用者执行/确认，当前交付只到等待烟测，不创建正式生产Release：
+发布产物烟测由使用者执行/确认。2026-09-21 已收到 Windows 与 Linux 本轮单房间烟测确认，范围、失败准备过程和最终回收证据见 [RC.1 烟测](validation/rc1-smoke.md)。以下为复验步骤，不创建正式生产 Release。此段为包外勘误，原 RC.1 包和校验清单不覆盖：
 
 1. Windows执行 `Get-FileHash <ZIP> -Algorithm SHA256`，Linux执行 `sha256sum -c <ZIP>.sha256`；与随包校验值一致后解压到全新ASCII可写目录，Linux必要时 `chmod +x d2core launcher-example`。
 2. 运行 `d2core version --json` 并按上文核对版本元数据。准备独立模板和全新data-dir，勿接管生产或旧data-dir；使用包中examples平台模板、docs/local-api.md及examples/launcher/README.md。
 3. 同一普通用户执行check，然后serve；另一终端create（唯一键），轮询operation/status，核对本代ready与Steam认证，客户端实际进房。
-4. restart原实例，核对旧代退出、新代递增，再次进房。stop后核对operation成功、reclaimed/stopped/cleanup=complete，日志和历史仍可查。failed时按operations.md显式回收，不换键掩盖失败。
+4. restart原实例，核对旧代退出、新代递增，再次进房。保持玩家在房间，退出管理器并确认游戏正常；使用原用户、data-dir及Linux运行库环境恢复serve，核对原实例状态，不重新create。最后stop后核对operation成功、reclaimed/stopped/cleanup=complete，日志和历史仍可查。failed时按operations.md显式回收，不换键掩盖失败。
 5. 记录ZIP SHA256、version JSON、操作/实例ID和客户端结果。按需另用launcher-example演示同用户外部协议流程；示例默认30秒后停止自己创建的房间。没有Go/Python运行依赖，不开放TCP管理API。
 6. 向交付方确认Windows/Linux结果或提交失败片段。未收到真实环境烟测确认前，不把该RC标成生产Release或宣称产物实机通过。已知限制与旧cfg/FIFO处理见operations.md。
+
+## RC.2 与平台集成
+
+用户已授权帮助与版本标识修正。打包工具 --version 接受 X.Y.Z、X.Y.Z-dev 或 X.Y.Z-rc.N；指定候选版本后写入程序version.version及BUILD.json.version，并生成对应版本文件名。不指定仍为开发标识。生产发布需要最终候选确认，不因构建成功自动发布。命令验证范围见 [验收矩阵](validation/rc2-commands.md)。平台开发可使用协议v1和client库，操作受理不等于完成，应保留创建key和operationId并轮询。
+
+RC.2从远端干净提交新构建，ZIP中含本轮勘误和验收范围。产物命令矩阵结果另随包提供，最后真实进房确认仍由使用者进行。不要覆盖RC.1或将RC.1的真实进房记录冒充RC.2测试结果。

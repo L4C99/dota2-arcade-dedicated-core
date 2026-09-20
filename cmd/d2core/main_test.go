@@ -3,11 +3,39 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestHelpDoesNotRunCommands(t *testing.T) {
+	for _, args := range [][]string{{"serve", "--help"}, {"create", "--help"}, {"help", "stop"}, {"help", "a2s", "enable"}, {"m0-inspect", "--help"}} {
+		if err := run(args); !errors.Is(err, flag.ErrHelp) {
+			t.Fatalf("%v: expected help without required parameters or side effects, got %v", args, err)
+		}
+	}
+	for _, command := range []string{"version", "check", "serve", "create", "list", "status", "operation", "logs", "restart", "stop", "a2s enable", "m0-inspect"} {
+		if !strings.Contains(commandHelp, command) {
+			t.Fatalf("missing command %q in overview", command)
+		}
+	}
+	if err := run([]string{"help", "__engine-quit"}); err == nil {
+		t.Fatal("internal command must not be dispatched by public help")
+	}
+}
+
+func TestInjectedVersion(t *testing.T) {
+	previous := releaseVersion
+	defer func() { releaseVersion = previous }()
+	releaseVersion = "0.1.0-rc.2"
+	v, err := capture(t, "version", "--json")
+	if err != nil || v["result"].(map[string]any)["version"] != releaseVersion {
+		t.Fatalf("version did not report build label: %v %v", v, err)
+	}
+}
 
 func capture(t *testing.T, args ...string) (map[string]any, error) {
 	t.Helper()
