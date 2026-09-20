@@ -193,9 +193,30 @@ func startWithIdentity(s Spec, openFD func(int) (int, error), readID func(int, s
 		return candidate, e
 	}
 	defer syscall.Close(pfd)
-	actual, e := readID(candidate.PID, s.RunDirectory)
-	if e != nil {
-		return candidate, e
+	// During exec, /proc/cmdline can briefly be empty while the original
+	// child is alive. Retry only that case with the held pidfd, then require
+	// the same complete identity comparison below. Never retry a mismatch.
+	var actual Identity
+	identityDeadline := time.Now().Add(100 * time.Millisecond)
+	for {
+		actual, e = readID(candidate.PID, s.RunDirectory)
+		if e == nil {
+			break
+		}
+		if !errors.Is(e, ErrGone) {
+			return candidate, e
+		}
+		gone, pollErr := exitedFD(pfd)
+		if pollErr != nil {
+			return candidate, pollErr
+		}
+		if gone {
+			return candidate, ErrGone
+		}
+		if !time.Now().Before(identityDeadline) {
+			return candidate, fmt.Errorf("%w: startup command line remained unavailable", ErrIdentity)
+		}
+		time.Sleep(time.Millisecond)
 	}
 	if actual.Executable != candidate.Executable || !reflect.DeepEqual(actual.Arguments, candidate.Arguments) || actual.InputDevice != candidate.InputDevice || actual.InputInode != candidate.InputInode {
 		return candidate, ErrIdentity

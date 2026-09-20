@@ -86,3 +86,6 @@ Windows多实例修正后：go test -race -ldflags=-linkmode=external ./internal
 - LX-02：启动时/proc/cmdline短暂为空，后续实现及验收单独记录。
 
 3381295 Windows完整go test ./... -count=1、go vet ./...、go test -race -ldflags=-linkmode=external ./... -count=1均通过；原失败日志继续保留。此结果不覆盖后续Linux追加修改，也不代替真实游戏验收。
+
+LX-01修复提交4608feb。LX-02只在Start已经持有原child pidfd且readIdentity返回空cmdline对应的ErrGone时，最多100ms重新读取；pidfd确认退出立即失败，其他读取错误立即失败，读取成功后原exe/argv/FIFO完整匹配仍必需，身份不符不重试，超时走CJ-01确切子进程回滚。未放宽普通Open/信号权限，也不更改格式或协议。
+Linux原生TestStartup*、TestStartIdentityRollback、TestExitPermission*、TestLinuxLifecycleAndIdentity -count=10全部通过（5.124s），其中真实Start/Stop重复1000次；确定性测试覆盖空读后恢复、持续空读超时与FIFO回滚、身份不符、真实pidfd退出、poll错误。完整test/vet/race和真实Dota仍待。
