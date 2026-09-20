@@ -70,3 +70,13 @@ Windows race实际使用外部链接，日志未出现数据竞争报告，但�
 两项新失败均保留，恢复后先调查，不跳过、不降低断言、不因早一轮通过而忽略。本轮仍未完成真实专服/客户端复验，不建议发布。Linux裁决外追加修复继续等待用户决定。
 
 全部原始日志与退出码已保存到本地ignored local/review/final-windows-*、final-linux-*。只读检查确认本机无go/*.test/d2core/dota2进程，隔离机d2coretest用户无进程，项目manager服务inactive。未关停或修改无关资源。任务因用户移动电脑暂停，代码提交仅本地，未push或发布。
+
+## 恢复后诊断（2026-09-20）
+
+用户已允许继续；开工HEAD aa4fcc0，工作树干净。暂停期间没有丢失或替换修复提交。Windows虚拟机已由用户启动且原IP可连接，尚未启动真实专服。
+
+- Windows原失败已复现。失败瞬间netstat确认测试选中的第二端口被外部HTTP连接占用（TIME_WAIT）；本机TCP动态范围实际为1024–15000。测试原先通过Listen(:0)选第一端口并假设相邻端口会保持空闲，存在环境竞争；核心PORT_IN_USE拒绝符合契约。仅改多实例测试的候选端口准备：随机探测20000–29999服务端口对，保留全部原并发、唯一端口、耗尽、退出隔离及回收重用断言，不重试失败create、不跳过用例，不改系统端口范围或产品分配逻辑。检查仍不是OS预约，其他环境的动态范围可能不同。
+- Linux原CJ02启动失败单独15次未复现，完整core三轮出现另一个loading阶段失败；进一步独立启动探针捕获readIdentity因/proc/cmdline短暂为空返回ErrGone，但紧接着同进程stat仍为R、完整argv可读。修复候选探针200次发生2次；原7bcbdb7独立副本200次发生4次，同一进程随后可取得完整匹配身份并安全清理。此为另一项既有启动竞态，不能把它当成墙钟回拨用例已通过或以延时掩盖。
+- 新Linux问题与此前退出期EACCES分开记录，已请求用户决定是否追加，两项均尚未改动。原始诊断日志保存在ignored local/review；诊断探针只在独立副本运行，不混入最终正式回归。
+- 测试helper补充失败时stderr、状态及输出日志，便于保留后续失败现场；未改变成功条件或断言。
+Windows多实例修正后：go test -race -ldflags=-linkmode=external ./internal/core -run TestMultipleAutomaticInstancesStayIndependent -count=20通过（115.709s），含40个同/不同模板子场景，未关闭race，未重试失败create。完整最终回归与真实专服仍待，不把定向通过扩写为整体通过。

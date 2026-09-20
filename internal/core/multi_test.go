@@ -2,7 +2,7 @@ package core
 
 import (
 	"encoding/json"
-	"net"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,13 +22,12 @@ func TestMultipleAutomaticInstancesStayIndependent(t *testing.T) {
 			m, path, _ := setupManager(t, "ready")
 			start := 0
 			for n := 0; n < 30; n++ {
-				l, e := net.Listen("tcp4", "127.0.0.1:0")
-				if e != nil {
-					t.Fatal(e)
-				}
-				p := l.Addr().(*net.TCPAddr).Port
-				l.Close()
-				if p < 65535 && records.CheckPort(p) == nil && records.CheckPort(p+1) == nil {
+				// Do not ask the OS for an ephemeral port and then assume its
+				// neighbor stays free: an unrelated outbound connection can
+				// claim it before the second create. Probe random service ports;
+				// this still is a preflight, not an OS reservation.
+				p := 20000 + rand.IntN(10000)
+				if records.CheckPort(p) == nil && records.CheckPort(p+1) == nil {
 					start = p
 					break
 				}
@@ -63,7 +62,11 @@ func TestMultipleAutomaticInstancesStayIndependent(t *testing.T) {
 					results <- call(t, m, "create", map[string]any{"template": p, "idempotencyKey": key})
 				}(p, key)
 			}
-			a, b := success(t, <-results), success(t, <-results)
+			first, second := <-results, <-results
+			if !first.OK || !second.OK {
+				t.Logf("selected range %d-%d; current probes: %v / %v; responses: %+v / %+v", start, start+1, records.CheckPort(start), records.CheckPort(start+1), first, second)
+			}
+			a, b := success(t, first), success(t, second)
 			idA, idB := a["instanceId"].(string), b["instanceId"].(string)
 			for _, v := range []map[string]any{a, b} {
 				if got := waitOperation(t, m, v["operationId"].(string)); got["status"] != "succeeded" {

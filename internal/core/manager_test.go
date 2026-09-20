@@ -41,6 +41,7 @@ func TestManagedChild(t *testing.T) {
 	go func() { time.Sleep(15 * time.Second); os.Exit(40) }()
 	mode, err := os.ReadFile(values["+exec"])
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "helper cfg:", err)
 		os.Exit(41)
 	}
 	if strings.Contains(string(mode), "early") {
@@ -49,11 +50,13 @@ func TestManagedChild(t *testing.T) {
 	port, _ := strconv.Atoi(values["-port"])
 	tcp, err := net.Listen("tcp4", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "helper TCP:", err)
 		os.Exit(42)
 	}
 	defer tcp.Close()
 	udp, err := net.ListenPacket("udp4", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "helper UDP:", err)
 		os.Exit(43)
 	}
 	defer udp.Close()
@@ -76,6 +79,7 @@ func TestManagedChild(t *testing.T) {
 	}
 	if !strings.Contains(string(mode), "never") {
 		if err = os.WriteFile(values["-con_logfile"], []byte("loaded\nready 中文玩家\n"), 0600); err != nil {
+			fmt.Fprintln(os.Stderr, "helper log:", err)
 			os.Exit(44)
 		}
 	}
@@ -115,8 +119,16 @@ func setupManager(t *testing.T, mode string) (*Manager, string, int) {
 	}
 	t.Cleanup(func() {
 		m.Close()
+		if t.Failed() {
+			b, _ := json.Marshal(m.store.State)
+			t.Logf("failed test state: %s", b)
+		}
 		for _, in := range m.store.State.Instances {
 			for _, r := range in.Runs {
+				if t.Failed() {
+					b, err := os.ReadFile(filepath.Join(r.Directory, "output.log"))
+					t.Logf("helper %s generation %d port %d output (%v): %s", in.ID, r.Generation, in.Port, err, b)
+				}
 				if r.Identity != nil {
 					_, _ = engine.Stop(*r.Identity, 100*time.Millisecond, time.Second)
 				}
