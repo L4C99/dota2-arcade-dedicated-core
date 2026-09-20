@@ -101,6 +101,7 @@ type Store struct {
 	State       State
 	saveHook    func(string) error // Tests inject failures; nil in production.
 	cleanupHook func()             // Test-only verification/deletion race seam.
+	pruneAfter  string             // Rotates bounded attempts across maintenance ticks.
 }
 
 func ID(prefix string) (string, error) {

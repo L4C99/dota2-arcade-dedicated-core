@@ -24,12 +24,15 @@ func (s *Store) PruneExpired(now time.Time, age time.Duration, limit int) (int, 
 		}
 	}
 	sort.Strings(ids)
+	start := sort.Search(len(ids), func(i int) bool { return ids[i] > s.pruneAfter })
+	ids = append(ids[start:], ids[:start]...)
 	count := 0
 	var cleanupErr error
 	for index, id := range ids {
 		if index == limit {
 			break
 		}
+		s.pruneAfter = id
 		in := s.State.Instances[id]
 		if err := s.removeHistoryFiles(in); err != nil {
 			cleanupErr = errors.Join(cleanupErr, &Failure{Code: "CLEANUP_FAILED", Stage: "cleanup", Message: err.Error(), InstanceID: id})
