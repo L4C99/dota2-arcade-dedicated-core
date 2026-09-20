@@ -128,6 +128,9 @@ func (s *Store) validateState() error {
 					return fmt.Errorf("invalid input ownership")
 				}
 			}
+			if r.PortCheck != nil && !oneOf(r.PortCheck.Status, "complete", "partial", "conflict") {
+				return fmt.Errorf("invalid port check status")
+			}
 			if r.Evidence != nil {
 				ev := r.Evidence
 				if ev.Generation != r.Generation || ev.Source != r.LogPath || ev.ObservedAt.IsZero() {

@@ -37,3 +37,5 @@ CJ-08提交0cbb23f。CJ-09：restart先检查RECLAIMED/BUSY/INVALID_STATE，再�
 CJ-09提交ca7ba61。CJ-10：CreateChecked在同键命中后、单次模板规范化后对准确快照执行两卷检查，再分配和持久化；不重复读取模板。Windows TestCreateChecksCFGVolumeBeforeAcceptance、TestLowDiskRejectsNewIntentButAllowsRetryAndStop通过，按路径注入data足够/cfg不足，新意图零记录，旧键模板失效且低空间时仍可重试/stop。
 
 CJ-10提交5720060。CJ-11改Windows逐路径组件检查REPARSE属性，不再按大小写敏感字符串判断链接。Windows a2s全套-v通过，case/dot/8.3别名均执行通过（非跳过），真实symlink与junction拒绝、备份/幂等/冲突/写入失败/权限测试保留。首次junction命令因路径斜杠解析失败，规范化测试路径后通过。Linux分支保持原有严格解析规则，Windows隔离真实A2S验收待执行。
+
+CJ-11提交edcaad5。CJ-07规则按用户确认落地：portCheck公开complete/partial/conflict及诊断，额外TCP与可确认UDP服务端点比较同协议/同号/重叠地址；未知UDP和双栈只报告partial。Windows与Linux完整core通过，含原生额外TCP/UDP/出站helper及纯冲突矩阵（矩阵注入不冒称OS实际允许重复TCP绑定），双实例停止隔离通过。Windows全套test/vet通过。Linux完整test出现TestLinuxLifecycleAndIdentity退出期permission denied；原固定7bcbdb7同环境100次复验15次同样失败，确认为既有间歇路径，本轮未擅自修复/跳过，完整Linux验收因此仍有阻塞。Windows默认race在进入测试前0xc0000139，改外部链接的config测试通过，完整race进行中。

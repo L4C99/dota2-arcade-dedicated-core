@@ -287,15 +287,17 @@ func (m *Manager) dispatch(req request) (any, *records.Failure) {
 }
 func (m *Manager) snapshot(in *records.Instance) map[string]any {
 	var evidence *engine.Evidence
+	var portCheck *records.PortCheck
 	bindings := []engine.Binding{}
 	if len(in.Runs) > 0 {
 		r := in.Runs[len(in.Runs)-1]
 		evidence = r.Evidence
+		portCheck = r.PortCheck
 		if r.Bindings != nil {
 			bindings = r.Bindings
 		}
 	}
-	return map[string]any{"instanceId": in.ID, "templateName": in.Snapshot.Name, "port": in.Port, "generation": in.Generation, "lifecycle": in.Lifecycle, "process": in.Process, "room": in.Room, "cleanup": in.Cleanup, "currentOperationId": in.CurrentOperationID, "createdAt": in.CreatedAt, "updatedAt": in.UpdatedAt, "evidence": evidence, "bindings": bindings, "error": in.Error}
+	return map[string]any{"instanceId": in.ID, "templateName": in.Snapshot.Name, "port": in.Port, "generation": in.Generation, "lifecycle": in.Lifecycle, "process": in.Process, "room": in.Room, "cleanup": in.Cleanup, "currentOperationId": in.CurrentOperationID, "createdAt": in.CreatedAt, "updatedAt": in.UpdatedAt, "evidence": evidence, "bindings": bindings, "portCheck": portCheck, "error": in.Error}
 }
 func (m *Manager) accepted(in *records.Instance, op *records.Operation) any {
 	return map[string]any{"accepted": true, "instanceId": in.ID, "operationId": op.ID, "state": map[string]any{"lifecycle": in.Lifecycle, "process": in.Process, "room": in.Room, "cleanup": in.Cleanup, "generation": in.Generation, "operationStatus": op.Status}}
@@ -550,6 +552,10 @@ func (m *Manager) observe(in *records.Instance, r *records.Run, o *engine.Observ
 		return false, classify(err, "observe")
 	}
 	r.Bindings = bindings
+	r.PortCheck = m.checkBindingConflicts(in, bindings)
+	if len(r.PortCheck.Conflicts) > 0 {
+		return false, fail("PORT_IN_USE", "observe", r.PortCheck.Conflicts[0])
+	}
 	if obs.Failure != "" {
 		return false, fail("START_FAILED", "observe", "matched failure signal: "+obs.Failure)
 	}

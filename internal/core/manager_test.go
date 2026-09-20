@@ -57,6 +57,23 @@ func TestManagedChild(t *testing.T) {
 		os.Exit(43)
 	}
 	defer udp.Close()
+	if strings.Contains(string(mode), "extra-sockets") {
+		extra, e := net.Listen("tcp4", "127.0.0.1:0")
+		if e != nil {
+			os.Exit(45)
+		}
+		defer extra.Close()
+		packet, e := net.ListenPacket("udp4", extra.Addr().String())
+		if e != nil {
+			os.Exit(46)
+		}
+		defer packet.Close()
+		outbound, e := net.Dial("udp4", "127.0.0.1:9")
+		if e != nil {
+			os.Exit(47)
+		}
+		defer outbound.Close()
+	}
 	if !strings.Contains(string(mode), "never") {
 		if err = os.WriteFile(values["-con_logfile"], []byte("loaded\nready 中文玩家\n"), 0600); err != nil {
 			os.Exit(44)

@@ -55,7 +55,13 @@ type Run struct {
 	Identity        *engine.Identity   `json:"identity"`
 	Evidence        *engine.Evidence   `json:"evidence"`
 	Bindings        []engine.Binding   `json:"bindings"`
+	PortCheck       *PortCheck         `json:"portCheck,omitempty"`
 	StopResult      *engine.StopResult `json:"stopResult"`
+}
+type PortCheck struct {
+	Status    string   `json:"status"`
+	Notes     []string `json:"notes"`
+	Conflicts []string `json:"conflicts"`
 }
 type Instance struct {
 	ID                 string          `json:"instanceId"`
