@@ -258,6 +258,9 @@ func (m *Manager) dispatch(req request) (any, *records.Failure) {
 		if e := parse(req.Params, &p); e != nil {
 			return nil, e
 		}
+		if p.Tail < 0 || p.Tail > 1000 {
+			return nil, fail("INVALID_REQUEST", "validate", "tail must be 1..1000, or 0 for default")
+		}
 		in := m.store.State.Instances[p.ID]
 		if in == nil {
 			return nil, fail("NOT_FOUND", "validate", "unknown instance")

@@ -282,7 +282,7 @@ func CheckPort(port int) error {
 
 func Fingerprint(path string, port int) (string, error) {
 	if !filepath.IsAbs(path) {
-		return "", fmt.Errorf("absolute template path required")
+		return "", &Failure{Code: "INVALID_PATH", Stage: "validate", Message: "absolute template path required"}
 	}
 	b, _ := json.Marshal(struct {
 		Path string
