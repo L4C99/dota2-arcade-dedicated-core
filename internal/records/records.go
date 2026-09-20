@@ -381,7 +381,7 @@ func (s *Store) PrepareRun(in *Instance) (*Run, error) {
 	r.CFGDigest = digest([]byte(expanded.CFG))
 	in.Generation = g
 	in.Runs = append(in.Runs, r)
-	in.UpdatedAt = time.Now().UTC()
+	in.UpdatedAt = OrderedTime(time.Now(), in.CreatedAt, in.UpdatedAt)
 	if err = s.Save(); err != nil {
 		return r, err
 	}

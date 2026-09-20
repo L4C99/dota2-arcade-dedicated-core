@@ -119,7 +119,7 @@ func completeIdentity(id *engine.Identity) bool {
 }
 
 func (m *Manager) recoveryFailure(in *records.Instance, op *records.Operation, code, message string) {
-	now := time.Now().UTC()
+	now := m.recordTime(in, op)
 	f := &records.Failure{Code: code, Stage: "recover", Message: message, InstanceID: in.ID, OperationID: op.ID}
 	in.Lifecycle = "failed"
 	in.Error = f

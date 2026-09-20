@@ -35,6 +35,7 @@ type Manager struct {
 	freeBytes  func(string) (uint64, error)
 	storage    storageStatus
 	spawn      func(engine.Spec) (engine.Identity, error)
+	clock      func() time.Time
 }
 type request struct {
 	ProtocolVersion int             `json:"protocolVersion"`
@@ -103,12 +104,12 @@ func (m *Manager) failedSave(in *records.Instance, w *worker, err error) {
 	f.OperationID = w.operationID
 	in.Error = f
 	in.Lifecycle = "failed"
-	in.UpdatedAt = time.Now().UTC()
 	op := m.store.State.Operations[w.operationID]
+	in.UpdatedAt = m.recordTime(in, op)
 	op.Status = "failed"
 	op.Phase = "done"
 	op.Error = f
-	now := time.Now().UTC()
+	now := m.recordTime(in, op)
 	op.FinishedAt = &now
 	// Memory reports the storage failure honestly. Do not attempt further writes
 	// or new operations until the operator fixes storage and restarts the manager.
@@ -321,7 +322,7 @@ func (m *Manager) finish(in *records.Instance, w *worker, status string, e *reco
 	if op.Status != "running" {
 		return
 	}
-	now := time.Now().UTC()
+	now := m.recordTime(in, op)
 	op.Status = status
 	op.Phase = "done"
 	op.FinishedAt = &now
@@ -575,7 +576,7 @@ func (m *Manager) change(in *records.Instance, kind string) (any, *records.Failu
 	if err != nil {
 		return nil, classify(err, "persist")
 	}
-	op := &records.Operation{ID: id, Kind: kind, InstanceID: in.ID, Generation: in.Generation, Status: "running", Phase: "accepted", CreatedAt: time.Now().UTC()}
+	op := &records.Operation{ID: id, Kind: kind, InstanceID: in.ID, Generation: in.Generation, Status: "running", Phase: "accepted", CreatedAt: m.recordTime(in, nil)}
 	m.store.State.Operations[id] = op
 	in.CurrentOperationID = id
 	if old != nil && !cancelled(old) {
@@ -754,14 +755,14 @@ func (m *Manager) watch() {
 				if m.writeError == nil {
 					in.Error = failure
 				}
-				in.UpdatedAt = time.Now().UTC()
+				in.UpdatedAt = m.recordTime(in, nil)
 				if err := m.save(); err != nil {
 					in.Error = fail("IO_ERROR", "persist", err.Error())
 					in.Error.InstanceID = in.ID
 					in.Error.OperationID = in.CurrentOperationID
 				}
 			} else if oldRoom != in.Room {
-				in.UpdatedAt = time.Now().UTC()
+				in.UpdatedAt = m.recordTime(in, nil)
 				if err := m.save(); err != nil {
 					in.Error = fail("IO_ERROR", "persist", err.Error())
 					in.Error.InstanceID = in.ID
