@@ -27,10 +27,13 @@ func rollbackStart(cmd *exec.Cmd, cause error) error {
 		go func() { _ = cmd.Wait() }()
 		return &StartError{Cause: errors.Join(cause, fmt.Errorf("spawn rollback kill: %w", killErr))}
 	}
-	done := make(chan struct{})
-	go func() { _ = cmd.Wait(); close(done) }()
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
 	select {
-	case <-done:
+	case waitErr := <-done:
+		if cmd.ProcessState == nil {
+			return &StartError{Cause: errors.Join(cause, fmt.Errorf("spawn rollback wait did not confirm exit: %v", waitErr))}
+		}
 		return &StartError{Cause: cause, Exited: true}
 	case <-time.After(5 * time.Second):
 		return &StartError{Cause: errors.Join(cause, errors.New("spawn rollback exit not confirmed"))}

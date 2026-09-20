@@ -9,6 +9,7 @@ import (
 
 func TestStartRollbackRemainsStoppable(t *testing.T) {
 	m, path, port := setupManager(t, "ready")
+	var exitedChild engine.Identity
 	m.spawn = func(s engine.Spec) (engine.Identity, error) {
 		id, e := engine.Start(s)
 		if e != nil {
@@ -18,6 +19,8 @@ func TestStartRollbackRemainsStoppable(t *testing.T) {
 		if !result.Confirmed {
 			return id, e
 		}
+		exitedChild = id
+		id.CreationTime, id.StartTicks, id.BootID = 0, 0, ""
 		return id, &engine.StartError{Cause: errors.New("post-spawn identity failure"), Exited: true}
 	}
 	id, op := createRoom(t, m, path, port)
@@ -29,7 +32,10 @@ func TestStartRollbackRemainsStoppable(t *testing.T) {
 		t.Fatal(state)
 	}
 	m.mu.Lock()
-	identity := *m.store.State.Instances[id].Runs[0].Identity
+	if completeIdentity(m.store.State.Instances[id].Runs[0].Identity) {
+		t.Fatal("fixture is not a partial identity")
+	}
+	identity := exitedChild
 	m.mu.Unlock()
 	h, e := engine.Open(identity)
 	if h != nil {
