@@ -62,7 +62,18 @@ func TestObservedFailureInvalidatesReadyOnce(t *testing.T) {
 					t.Fatal(e)
 				}
 			}
+			// Removing the immediate symptom cannot re-advertise a failed room.
+			if mode == "signal" {
+				if e := os.WriteFile(run.LogPath, []byte("loaded\nready\n"), 0600); e != nil {
+					t.Fatal(e)
+				}
+			}
 			m.mu.Unlock()
+			time.Sleep(550 * time.Millisecond)
+			state := success(t, call(t, m, "status", map[string]any{"instanceId": id}))
+			if state["room"] == "ready" {
+				t.Fatal("failed lifecycle became ready again", state)
+			}
 			if r := stopRoom(t, m, id); r["status"] != "succeeded" {
 				t.Fatal(r)
 			}

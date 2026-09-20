@@ -559,6 +559,11 @@ func (m *Manager) observe(in *records.Instance, r *records.Run, o *engine.Observ
 	if obs.Failure != "" {
 		return false, fail("START_FAILED", "observe", "matched failure signal: "+obs.Failure)
 	}
+	// A later clean scan does not undo a failed lifecycle or its operation.
+	// Explicit stop/reclaim is still required before a new creation intention.
+	if in.Lifecycle == "failed" && in.Error != nil {
+		return false, in.Error
+	}
 	tcp, udp := false, false
 	for _, b := range bindings {
 		if b.Port == in.Port {

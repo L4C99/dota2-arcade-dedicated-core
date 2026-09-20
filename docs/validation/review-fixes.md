@@ -41,3 +41,5 @@ CJ-10提交5720060。CJ-11改Windows逐路径组件检查REPARSE属性，不再�
 CJ-11提交edcaad5。CJ-07规则按用户确认落地：portCheck公开complete/partial/conflict及诊断，额外TCP与可确认UDP服务端点比较同协议/同号/重叠地址；未知UDP和双栈只报告partial。Windows与Linux完整core通过，含原生额外TCP/UDP/出站helper及纯冲突矩阵（矩阵注入不冒称OS实际允许重复TCP绑定），双实例停止隔离通过。Windows全套test/vet通过。Linux完整test出现TestLinuxLifecycleAndIdentity退出期permission denied；原固定7bcbdb7同环境100次复验15次同样失败，确认为既有间歇路径，本轮未擅自修复/跳过，完整Linux验收因此仍有阻塞。Windows默认race在进入测试前0xc0000139，改外部链接的config测试通过，完整race进行中。
 
 CJ-01补核：rollback的Wait必须产出ProcessState才标Exited=true，避免等待API错误被当成退出；core回归现在明确返回缺少creation/boot/tick的partial identity，仍确认真实child已退出且stop可收敛。Windows TestStart定向通过。
+
+CJ-06补核：已经failed的生命周期即使下一次日志或binding症状消失也不能重新ready；保持原错误直到显式回收。Windows TestObservedFailure三类各追加症状消失检查通过。
