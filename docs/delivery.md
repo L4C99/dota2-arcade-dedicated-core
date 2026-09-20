@@ -26,3 +26,18 @@ go run ./tools/package --go <Go绝对路径> --output dist --build-time <本次�
 build-time可省略并使用实际当前时间；复现同一包时必须传入原BUILD.json的buildTime。sourceTime与buildTime分别记录提交时间和构建时间。程序拒绝脏工作树，使用固定文件清单、GOARCH=amd64、CGO_ENABLED=0、trimpath、稳定归档顺序和时间；不包含local、data、VPK、私钥或原始日志。已存在的输出不覆盖。构建/归档失败可能留下无校验文件的不完整产物，应核对后清理或改用新的输出目录。
 
 交叉构建只是生成文件，不能代替目标平台实机运行。CI只做辅助测试与构建；不自动连接测试主机、不运行Dota、不创建GitHub Release。M0—M4真实证据见validation目录。GitHub源码推送、交付包生成与GitHub Release发布分别记录，当前未创建GitHub Release。
+
+## v0.1.0-rc.1 交付与产物烟测
+
+该RC保持已独立复核的1a0b79c6c61c87be87fbb7881376bf031bd7b464产品代码，仅补充验收和运维文档。先推送文档提交与RC tag，再从远端克隆、detach到tag指向的完整提交，并以干净工作树运行上述tools/package流程；不得复用开发目录二进制。生成的提交命名ZIP可复制为 `d2core-v0.1.0-rc.1-<windows|linux>-amd64.zip`，内容不重打包，并重新为最终文件名计算校验清单。
+
+包内BUILD.json记录真实构建提交、UTC时间、Go1.27.1及目标平台。现有程序version.version固定为0.1.0-dev，本阶段禁止产品代码修改，因此不伪改此字段；RC版本以远端v0.1.0-rc.1 tag和随包RC-MANIFEST.json为准。核验程序gitCommit等于tag指向提交和BUILD.json.gitCommit、gitDirty=false、buildTime一致。BUILD.json.status沿用工具的local build标记，不能视为RC产物已通过真实环境烟测。原有代码实机验收不替代新ZIP烟测。
+
+发布产物烟测由使用者执行/确认，当前交付只到等待烟测，不创建正式生产Release：
+
+1. Windows执行 `Get-FileHash <ZIP> -Algorithm SHA256`，Linux执行 `sha256sum -c <ZIP>.sha256`；与随包校验值一致后解压到全新ASCII可写目录，Linux必要时 `chmod +x d2core launcher-example`。
+2. 运行 `d2core version --json` 并按上文核对版本元数据。准备独立模板和全新data-dir，勿接管生产或旧data-dir；使用包中examples平台模板、docs/local-api.md及examples/launcher/README.md。
+3. 同一普通用户执行check，然后serve；另一终端create（唯一键），轮询operation/status，核对本代ready与Steam认证，客户端实际进房。
+4. restart原实例，核对旧代退出、新代递增，再次进房。stop后核对operation成功、reclaimed/stopped/cleanup=complete，日志和历史仍可查。failed时按operations.md显式回收，不换键掩盖失败。
+5. 记录ZIP SHA256、version JSON、操作/实例ID和客户端结果。按需另用launcher-example演示同用户外部协议流程；示例默认30秒后停止自己创建的房间。没有Go/Python运行依赖，不开放TCP管理API。
+6. 向交付方确认Windows/Linux结果或提交失败片段。未收到真实环境烟测确认前，不把该RC标成生产Release或宣称产物实机通过。已知限制与旧cfg/FIFO处理见operations.md。
