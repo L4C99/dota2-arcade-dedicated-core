@@ -80,3 +80,9 @@ Windows race实际使用外部链接，日志未出现数据竞争报告，但�
 - 新Linux问题与此前退出期EACCES分开记录，已请求用户决定是否追加，两项均尚未改动。原始诊断日志保存在ignored local/review；诊断探针只在独立副本运行，不混入最终正式回归。
 - 测试helper补充失败时stderr、状态及输出日志，便于保留后续失败现场；未改变成功条件或断言。
 Windows多实例修正后：go test -race -ldflags=-linkmode=external ./internal/core -run TestMultipleAutomaticInstancesStayIndependent -count=20通过（115.709s），含40个同/不同模板子场景，未关闭race，未重试失败create。完整最终回归与真实专服仍待，不把定向通过扩写为整体通过。
+
+用户明确授权单独追加修复两项Linux既有竞态（不改变CJ裁决分类）：
+- LX-01：退出时/proc权限撤销早于pidfd退出可读。仅在原已持有pidfd上对EACCES/EPERM与既有ENOENT路径一样等待最多100ms；只有pidfd证明退出才返回stopped，持续权限错误仍ErrIdentity，身份不符不重试，未发送任何附加信号。Linux原生TestExitPermission*和TestLinuxLifecycleAndIdentity -count=30通过（4.729s），正反向验证真实退出、持续拒绝、身份不符与poll失败。
+- LX-02：启动时/proc/cmdline短暂为空，后续实现及验收单独记录。
+
+3381295 Windows完整go test ./... -count=1、go vet ./...、go test -race -ldflags=-linkmode=external ./... -count=1均通过；原失败日志继续保留。此结果不覆盖后续Linux追加修改，也不代替真实游戏验收。

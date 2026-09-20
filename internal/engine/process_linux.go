@@ -241,27 +241,31 @@ func (h *Handle) Close() error {
 	return e
 }
 func (h *Handle) alive() (bool, error) {
+	return h.aliveWith(readIdentity, pidfdExited)
+}
+func (h *Handle) aliveWith(read func(int, string) (Identity, error), poll func(int) (bool, error)) (bool, error) {
 	if h.fd < 0 {
 		return false, os.ErrClosed
 	}
-	gone, e := pidfdExited(h.fd)
+	gone, e := poll(h.fd)
 	if e != nil {
 		return false, e
 	}
 	if gone {
 		return false, nil
 	}
-	actual, e := readIdentity(h.identity.PID, h.identity.RunDirectory)
+	actual, e := read(h.identity.PID, h.identity.RunDirectory)
 	if e != nil {
 		// /proc/exe and fd entries can disappear before the same held pidfd
 		// becomes readable during exit. Wait only for that pidfd, bounded;
-		// permission errors or a real identity mismatch are never softened.
+		// Exit may also revoke /proc access before pidfd becomes readable.
+		// Permission denial alone never proves exit or permits signaling.
 		deadline := time.Now()
-		if errors.Is(e, os.ErrNotExist) || errors.Is(e, ErrGone) {
+		if errors.Is(e, os.ErrNotExist) || errors.Is(e, ErrGone) || errors.Is(e, os.ErrPermission) {
 			deadline = deadline.Add(100 * time.Millisecond)
 		}
 		for {
-			gone, pollErr := pidfdExited(h.fd)
+			gone, pollErr := poll(h.fd)
 			if pollErr != nil {
 				return false, pollErr
 			}
