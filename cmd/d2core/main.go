@@ -43,7 +43,9 @@ Commands:
   restart INSTANCE                Restart using the saved template and port
   stop INSTANCE                   Stop and reclaim, including failed instances
   a2s enable --dota-dir ABS        Explicitly configure gameinfo Advertise
-  m0-inspect [resource options]    Optional read-only development diagnostics
+
+Historical diagnostics (non-production):
+  m0-inspect [resource options]    M0 historical diagnostics; non-production use only
 
 Manager commands accept --data-dir ABS and --json (JSON is the default).
 serve options: --port-min 27015 --port-max 27064 --history-days 7 --min-free-mib 1024
@@ -325,6 +327,11 @@ func writeResult(result any, failure any) error {
 
 func inspect(args []string) error {
 	f := flag.NewFlagSet("m0-inspect", flag.ContinueOnError)
+	f.Usage = func() {
+		fmt.Fprintln(f.Output(), "Usage: d2core m0-inspect [resource options]")
+		fmt.Fprintln(f.Output(), "M0 historical diagnostics; non-production use only. Not required for deployment or external integration.")
+		f.PrintDefaults()
+	}
 	var in m0.Input
 	f.StringVar(&in.Executable, "executable", "", "absolute engine executable path")
 	f.StringVar(&in.WorkingDirectory, "working-directory", "", "absolute engine working directory")

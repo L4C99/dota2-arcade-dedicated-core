@@ -1,4 +1,4 @@
-// package builds development delivery archives from a clean checkout. It does
+// package is a maintainer-only tool that builds delivery archives from a clean checkout. It does
 // not publish a GitHub release or include games, maps, credentials or local data.
 package main
 
@@ -18,6 +18,14 @@ import (
 	"strings"
 	"time"
 )
+
+// Explicit runtime distribution allowlist. Development evidence stays in source.
+var releaseFiles = []string{
+	"README.md", "RELEASE_NOTES.md", "docs/delivery.md", "docs/operations.md",
+	"docs/local-api.md", "docs/a2s.md", "examples/README.md",
+	"examples/template.windows.json", "examples/template.linux.json",
+	"examples/launcher/README.md", "examples/launcher/main.go",
+}
 
 func main() {
 	if e := run(); e != nil {
@@ -108,8 +116,7 @@ func run() error {
 			os.RemoveAll(stage)
 		}
 	}()
-	common := []string{"README.md", "docs/delivery.md", "docs/operations.md", "docs/local-api.md", "docs/a2s.md", "docs/decisions.md", "docs/roadmap.md", "docs/validation/m0.md", "docs/validation/m1.md", "docs/validation/m2.md", "docs/validation/m2-reboot.md", "docs/validation/m3.md", "docs/validation/m4.md", "examples/README.md", "examples/template.windows.json", "examples/template.linux.json", "examples/launcher/README.md", "examples/launcher/main.go", "tools/m0/README.md"}
-	common = append(common, "docs/validation/rc1-smoke.md", "docs/validation/rc2-commands.md", "docs/validation/review-fixes.md")
+	common := releaseFiles
 	for _, platform := range []string{"windows", "linux"} {
 		suffix := ""
 		if platform == "windows" {

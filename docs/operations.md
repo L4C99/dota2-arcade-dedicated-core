@@ -1,12 +1,14 @@
 # 本地核心操作
 
-真实引擎验收状态见 [M1 记录](validation/m1.md)。M0—M4既定范围已完成验收；接管现有生产房间仍须单独部署授权。游戏、运行库和两端匹配的地图资源由使用者准备；核心不下载或更新它们。
+真实引擎验收状态见 [M1 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/main/docs/validation/m1.md)。M0—M4既定范围已完成验收；接管现有生产房间仍须单独部署授权。游戏、运行库和两端匹配的地图资源由使用者准备；核心不下载或更新它们。
 
-RC.1 包外勘误与用户烟测结果见 [RC.1 烟测](validation/rc1-smoke.md)。默认使用数字工坊 ID，资源布局与 n6 规则见 [模板说明](../examples/README.md)。以下补充不改变已交付 RC.1 包或命令语法。
+默认使用数字工坊 ID，资源布局与 n6 规则见 [模板说明](../examples/README.md)。本说明面向 v0.1.0；历史候选差异仅供旧包排障参考。
 
 ## 完整命令与参数索引
 
-本表按当前候选的 `cmd/d2core/main.go` 注册项核对；RC.1 与 RC.2 的公开业务命令一致，帮助行为差异见下文。ABS 表示本平台绝对路径；INSTANCE 是 i_ 开头实例 ID，OPERATION 是 o_ 开头操作 ID。尖括号不是命令的一部分。
+正式运行使用下表的管理命令及独立 A2S 工具。m0-inspect 仅为兼容保留的M0 历史诊断入口（非生产用途），部署无需使用。
+
+本表按 v0.1.0 发布准备版本的 `cmd/d2core/main.go` 注册项核对；RC.1 与 RC.2 的公开业务命令一致，帮助行为差异见下文。ABS 表示本平台绝对路径；INSTANCE 是 i_ 开头实例 ID，OPERATION 是 o_ 开头操作 ID。尖括号不是命令的一部分。
 
 | 命令 | 必填参数/位置参数 | 可选参数及默认值 | 用途 |
 | --- | --- | --- | --- |
@@ -21,7 +23,7 @@ RC.1 包外勘误与用户烟测结果见 [RC.1 烟测](validation/rc1-smoke.md)
 | `restart` | `INSTANCE` | `--data-dir ABS`、`--json` | 沿用配置快照和端口重启，返回新操作 ID |
 | `stop` | `INSTANCE` | `--data-dir ABS`、`--json` | 停止并回收，也用于 failed 实例显式清理 |
 | `a2s enable` | `--dota-dir ABS` | `--json` | 显式修改 gameinfo 的 Advertise；详见 [A2S说明](a2s.md) |
-| `m0-inspect` | 无 | `--executable ABS`、`--working-directory ABS`、`--cfg-directory ABS`、`--vpk ABS`、`--gameinfo ABS`、`--version-file ABS` | 只读开发检查；缺少输入会标记 missing_input，不代表运行验收 |
+| `m0-inspect` | 无 | `--executable ABS`、`--working-directory ABS`、`--cfg-directory ABS`、`--vpk ABS`、`--gameinfo ABS`、`--version-file ABS` | M0 历史诊断，非生产用途；不供正式部署或外部集成依赖 |
 
 除 m0-inspect 外，上述公开命令支持 --json，结构化输出也是默认行为。m0-inspect 自带 JSON 输出，但**不接受 --json**；不要将该参数无差别加到所有命令。manage 类命令的 data-dir 默认为可执行文件旁的 data，建议每次显式传入以免连错管理器。check/version/a2s/m0-inspect 不需要运行中的管理器；其他客户端管理命令需要 serve 在线。
 
@@ -34,13 +36,13 @@ d2core logs i_实际实例ID --generation 1 --tail 200 --data-dir <绝对数据�
 d2core a2s enable --dota-dir <Dota安装根目录> --json
 ```
 
-a2s 的 dota-dir 是包含 game 子目录的安装根目录，不是 game/dota。它会写文件，不能当只读探测使用；核心没有 a2s query/disable 子命令。m0-inspect 的全部参数及采集边界见 [M0工具说明](../tools/m0/README.md)。
+a2s 的 dota-dir 是包含 game 子目录的安装根目录，不是 game/dota。它会写文件，不能当只读探测使用；核心没有 a2s query/disable 子命令。m0-inspect 的全部参数及采集边界见 [M0工具说明](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/main/tools/m0/README.md)。
 
 程序还注册了内部 `__engine-quit` 控制台辅助入口，仅供核心调用，不是用户停止实例的接口；用户用 stop。没有 start/delete/update-template/shutdown 等公开子命令：已回收后用新 key create，修改源模板不改变旧实例快照，管理器用 Ctrl+C 退出。
 
 ### 帮助与退出码
 
-RC.2 支持 `d2core help`、`d2core --help`、`d2core -h` 输出完整命令列表，帮助退出0；无参数输出完整用法但仍退出2。`d2core help logs` 或 `d2core logs --help` 查看参数，A2S 用 `d2core a2s enable --help`。RC.1 原包没有顶层help，无参数提示不完整，子命令帮助通常退出2、m0-inspect帮助退出1；不要把旧包帮助退出码误判为启动失败。
+v0.1.0 沿用 RC.2 的帮助行为，支持 `d2core help`、`d2core --help`、`d2core -h` 输出完整命令列表，帮助退出0；无参数输出完整用法但仍退出2。`d2core help logs` 或 `d2core logs --help` 查看参数，A2S 用 `d2core a2s enable --help`。RC.1 原包没有顶层help，无参数提示不完整，子命令帮助通常退出2、m0-inspect帮助退出1；不要把旧包帮助退出码误判为启动失败。
 
 正常管理调用退出0表示请求成功，create/restart/stop 仍需查询 operation；执行错误通常退出1，CLI用法错误通常退出2。m0-inspect 使用独立错误路径，参数/检查失败返回1。
 
@@ -181,7 +183,7 @@ d2core list --data-dir <数据绝对路径> --json
 
 管理端退出保留专服；重新启动必须使用同一 data-dir。遇到 unknown 或持久化故障时保留现场和日志，不能删状态或重新 create 来掩盖残留。数据损坏、不兼容版本、目录不可写均明确报错，不自动换目录。不要同时用外部工具修改核心生成的 cfg 或运行记录。
 
-当前持久化格式为2，模板与协议仍为1。格式1实验目录不会自动升级；保留旧目录及证据，确认旧实例已停止回收后为新测试使用独立目录。state.json 与 store.marker 缺失、不匹配或校验失败时保留现场，不手工删标记或修改校验和来绕过检查。启动恢复不自动派生游戏进程；操作返回 INTERRUPTED 时先查询实例状态，确认并显式停止回收后，再以新创建意图申请实例。双平台整机重启验收已完成，详见 [M2记录](validation/m2.md)。
+当前持久化格式为2，模板与协议仍为1。格式1实验目录不会自动升级；保留旧目录及证据，确认旧实例已停止回收后为新测试使用独立目录。state.json 与 store.marker 缺失、不匹配或校验失败时保留现场，不手工删标记或修改校验和来绕过检查。启动恢复不自动派生游戏进程；操作返回 INTERRUPTED 时先查询实例状态，确认并显式停止回收后，再以新创建意图申请实例。双平台整机重启验收已完成，详见 [M2记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/main/docs/validation/m2.md)。
 
 普通创建/重启不修改 gameinfo 或 VAC 配置。本地管理不监听 TCP；Windows 用命名管道，Linux 用 Unix socket，不需要给管理 API 开放公网防火墙端口。游戏端口的外部可达性应单独验证。
 

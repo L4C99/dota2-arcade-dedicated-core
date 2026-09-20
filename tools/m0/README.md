@@ -1,4 +1,6 @@
-# M0 实验工具
+# M0 实验工具（仅非生产验证）
+
+只用于隔离开发/测试环境，不随 Release 运行包分发，不是日常开服或停止生产实例的工具。
 
 这些工具用于验证运行前提，不是正式管理端。Go 源码位于 cmd/d2core 和 internal/m0；下列 PowerShell 探针要求 Windows 与 PowerShell 7。
 

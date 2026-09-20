@@ -2,7 +2,9 @@
 
 `client` 是可供外部 Go 程序导入的同用户本地协议客户端；与 CLI 使用相同命名管道/Unix socket、身份检查、大小限制和超时处理。没有TCP管理端点，也不会替调用方启动管理端。
 
-构建示例：
+普通用户使用随包 launcher-example 二进制；这是集成演示，非生产常驻控制器。
+
+开发者在源码仓库构建示例（部署用户无需执行）：
 
 ```sh
 go build -o launcher-example ./examples/launcher

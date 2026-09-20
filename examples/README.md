@@ -1,6 +1,6 @@
 # 配置示例
 
-[Windows](template.windows.json) 和 [Linux](template.linux.json) 展示模板 v1。字段、错误和占位符规则以 [本地协议](../docs/local-api.md) 为准。配置模块已提供静态校验和展开；正式生命周期的实现与实机验收状态见 [M1 记录](../docs/validation/m1.md)，示例本身不表示已经通过进房验收。
+[Windows](template.windows.json) 和 [Linux](template.linux.json) 展示模板 v1。字段、错误和占位符规则以 [本地协议](../docs/local-api.md) 为准。配置模块已提供静态校验和展开；正式生命周期的实现与实机验收状态见 [M1 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/main/docs/validation/m1.md)，示例本身不表示已经通过进房验收。
 
 使用前须替换程序、工作目录和 cfg 目录为目标机器上已有的绝对路径，并将 `example_map` 改成 VPK 内实际地图名。将 `REPLACE_WITH_WORKSHOP_ID` 替换为实际数字工坊 ID。标准部署布局为 `game/dota_addons/<工坊ID>/pak01_dir.vpk`，客户端订阅对应原游廊地图，`customgamemode` 填工坊 ID，而不是服务器绝对路径。核心不下载或分发文件，也不验证工坊 ID 与资源是否对应。上述提示文字是普通文本，静态 check 不会替你判断是否已正确替换。
 
