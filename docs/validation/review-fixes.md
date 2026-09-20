@@ -35,3 +35,5 @@ CJ-06提交6043064。CJ-08：Fingerprint相对路径返回INVALID_PATH/validate�
 CJ-08提交0cbb23f。CJ-09：restart先检查RECLAIMED/BUSY/INVALID_STATE，再查两卷空间；Windows TestRestartStateBeforeLowSpace与TestLifecycleSnapshotRestartStopAndRetry通过，低空间下BUSY、RECLAIMED不再被遮蔽，合法运行态仍拒绝不足空间。
 
 CJ-09提交ca7ba61。CJ-10：CreateChecked在同键命中后、单次模板规范化后对准确快照执行两卷检查，再分配和持久化；不重复读取模板。Windows TestCreateChecksCFGVolumeBeforeAcceptance、TestLowDiskRejectsNewIntentButAllowsRetryAndStop通过，按路径注入data足够/cfg不足，新意图零记录，旧键模板失效且低空间时仍可重试/stop。
+
+CJ-10提交5720060。CJ-11改Windows逐路径组件检查REPARSE属性，不再按大小写敏感字符串判断链接。Windows a2s全套-v通过，case/dot/8.3别名均执行通过（非跳过），真实symlink与junction拒绝、备份/幂等/冲突/写入失败/权限测试保留。首次junction命令因路径斜杠解析失败，规范化测试路径后通过。Linux分支保持原有严格解析规则，Windows隔离真实A2S验收待执行。

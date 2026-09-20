@@ -45,12 +45,8 @@ func enable(dotaDir string, hook func(string) error) (r Result, err error) {
 	}
 	dotaDir = filepath.Clean(dotaDir)
 	r.Path = filepath.Join(dotaDir, "game", "dota", "gameinfo.gi")
-	real, e := filepath.EvalSymlinks(r.Path)
-	if e != nil {
+	if e := plainInstallationPath(r.Path); e != nil {
 		return r, e
-	}
-	if real != r.Path {
-		return r, fmt.Errorf("linked gameinfo path rejected; select the resolved installation")
 	}
 	lockPath := r.Path + ".d2core-a2s.lock"
 	lock, e := os.OpenFile(lockPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
