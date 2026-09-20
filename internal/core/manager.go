@@ -573,11 +573,6 @@ func (m *Manager) observe(in *records.Instance, r *records.Run, o *engine.Observ
 func (m *Manager) change(in *records.Instance, kind string) (any, *records.Failure) {
 	old := m.workers[in.ID]
 	if kind == "restart" {
-		for _, path := range []string{m.store.Dir, in.Snapshot.CFG.Directory} {
-			if f := m.checkSpace(path); f != nil {
-				return nil, f
-			}
-		}
 		if in.Lifecycle == "reclaimed" {
 			return nil, fail("RECLAIMED", "validate", "historical instance cannot restart")
 		}
@@ -586,6 +581,11 @@ func (m *Manager) change(in *records.Instance, kind string) (any, *records.Failu
 		}
 		if in.Lifecycle != "active" || in.Process != "running" {
 			return nil, fail("INVALID_STATE", "validate", "restart requires a running active instance")
+		}
+		for _, path := range []string{m.store.Dir, in.Snapshot.CFG.Directory} {
+			if f := m.checkSpace(path); f != nil {
+				return nil, f
+			}
 		}
 	}
 	if kind == "stop" {

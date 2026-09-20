@@ -31,3 +31,5 @@ CJ-04提交303f0fe。CJ-05增加内存轮转游标，每周期仍最多limit次�
 CJ-05提交cccb9b4。CJ-06统一observe失败时room/evidence失效，未知身份保持unknown；watch仅状态/错误语义变化保存，不改历史成功operation。Windows TestObservedFailureInvalidatesReadyOnce通过：ready后failureAny、日志非普通文件、binding错误三种；2.2秒内持久化恰好一次，之后stop可回收。Linux全套合并验证待执行。
 
 CJ-06提交6043064。CJ-08：Fingerprint相对路径返回INVALID_PATH/validate，logs tail越界返回INVALID_REQUEST/validate（0仍默认）；未把真实I/O错误改为参数错误。Windows core TestCallerErrorCodes和cmd TestCLICallerErrorCodes通过；CLI实际通过本地命名管道，首次沙箱ACL拒绝后正常权限重跑通过。Linux合并回归待执行。
+
+CJ-08提交0cbb23f。CJ-09：restart先检查RECLAIMED/BUSY/INVALID_STATE，再查两卷空间；Windows TestRestartStateBeforeLowSpace与TestLifecycleSnapshotRestartStopAndRetry通过，低空间下BUSY、RECLAIMED不再被遮蔽，合法运行态仍拒绝不足空间。
