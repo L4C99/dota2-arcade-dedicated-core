@@ -27,3 +27,5 @@ CJ-02提交a9e3817。CJ-03新增format2可选cfgOwnership，checksum覆盖；旧
 CJ-03提交446efcb。CJ-04：spawn前durable InputOwnership，仍为format2可选字段；恢复没有进程身份但已确认退出时按输入inode/device清理，不放宽未知FIFO白名单。Windows core/records全套通过；Linux普通用户 core/records/engine全套 -count=1通过（含新TestOrphanFIFOIdentityGapExpires、TestUnknownFIFORetentionRefused），证明身份未写/child退出→reopen→stop→prune，外来FIFO仍拒绝。仅helper自动测试，真实Dota回收待验收。
 
 CJ-04提交303f0fe。CJ-05增加内存轮转游标，每周期仍最多limit次尝试；失败保留重试，后续候选不被固定前缀饿死；manager重启游标重置但持续维护会前进。Windows TestRetentionFailedPrefixCannotStarve通过：17项前16失败，第二轮第17成功，移除外来阻塞后16项可重试并同步清除keys/operations。Linux合并回归待执行。
+
+CJ-05提交cccb9b4。CJ-06统一observe失败时room/evidence失效，未知身份保持unknown；watch仅状态/错误语义变化保存，不改历史成功operation。Windows TestObservedFailureInvalidatesReadyOnce通过：ready后failureAny、日志非普通文件、binding错误三种；2.2秒内持久化恰好一次，之后stop可回收。Linux全套合并验证待执行。

@@ -36,6 +36,7 @@ type Manager struct {
 	storage    storageStatus
 	spawn      func(engine.Spec) (engine.Identity, error)
 	clock      func() time.Time
+	bindings   func(*engine.Handle) ([]engine.Binding, error)
 }
 type request struct {
 	ProtocolVersion int             `json:"protocolVersion"`
@@ -476,7 +477,18 @@ func (m *Manager) awaitReadiness(in *records.Instance, r *records.Run, w *worker
 		}
 	}
 }
-func (m *Manager) observe(in *records.Instance, r *records.Run, o *engine.Observer) (bool, *records.Failure) {
+func (m *Manager) observe(in *records.Instance, r *records.Run, o *engine.Observer) (ready bool, failure *records.Failure) {
+	defer func() {
+		if failure != nil {
+			in.Room = "failed"
+			if in.Process == "unknown" {
+				in.Room = "unknown"
+			}
+			if r.Evidence != nil {
+				r.Evidence.Valid = false
+			}
+		}
+	}()
 	h, err := engine.Open(*r.Identity)
 	if errors.Is(err, engine.ErrGone) {
 		in.Process = "stopped"
@@ -501,7 +513,11 @@ func (m *Manager) observe(in *records.Instance, r *records.Run, o *engine.Observ
 		return false, classify(err, "observe")
 	}
 	r.Evidence = obs.Evidence
-	bindings, err := h.Bindings()
+	readBindings := m.bindings
+	if readBindings == nil {
+		readBindings = (*engine.Handle).Bindings
+	}
+	bindings, err := readBindings(h)
 	// The process can exit while its log or native socket tables are read.
 	// Recheck the same verified handle before classifying a /proc error or
 	// promoting readiness; a successful earlier Open is not a liveness lease.
@@ -509,17 +525,23 @@ func (m *Manager) observe(in *records.Instance, r *records.Run, o *engine.Observ
 	if errors.Is(err, engine.ErrGone) || (identityErr == nil && !alive) {
 		in.Process = "stopped"
 		in.Room = "failed"
-		r.Evidence.Valid = false
+		if r.Evidence != nil {
+			r.Evidence.Valid = false
+		}
 		return false, fail("START_FAILED", "observe", "process exited")
 	}
 	if identityErr != nil {
 		in.Process = "unknown"
 		in.Room = "unknown"
-		r.Evidence.Valid = false
+		if r.Evidence != nil {
+			r.Evidence.Valid = false
+		}
 		return false, fail("IDENTITY_UNVERIFIED", "observe", identityErr.Error())
 	}
 	if err != nil {
-		r.Evidence.Valid = false
+		if r.Evidence != nil {
+			r.Evidence.Valid = false
+		}
 		return false, classify(err, "observe")
 	}
 	r.Bindings = bindings
@@ -760,6 +782,7 @@ func (m *Manager) watch() {
 				observers[key] = o
 			}
 			oldRoom := in.Room
+			oldProcess, oldLifecycle, oldError := in.Process, in.Lifecycle, in.Error
 			_, failure := m.observe(in, r, o)
 			if failure != nil {
 				failure.InstanceID = in.ID
@@ -768,11 +791,13 @@ func (m *Manager) watch() {
 				if m.writeError == nil {
 					in.Error = failure
 				}
-				in.UpdatedAt = m.recordTime(in, nil)
-				if err := m.save(); err != nil {
-					in.Error = fail("IO_ERROR", "persist", err.Error())
-					in.Error.InstanceID = in.ID
-					in.Error.OperationID = in.CurrentOperationID
+				if oldRoom != in.Room || oldProcess != in.Process || oldLifecycle != in.Lifecycle || !sameFailure(oldError, in.Error) {
+					in.UpdatedAt = m.recordTime(in, nil)
+					if err := m.save(); err != nil {
+						in.Error = fail("IO_ERROR", "persist", err.Error())
+						in.Error.InstanceID = in.ID
+						in.Error.OperationID = in.CurrentOperationID
+					}
 				}
 			} else if oldRoom != in.Room {
 				in.UpdatedAt = m.recordTime(in, nil)
