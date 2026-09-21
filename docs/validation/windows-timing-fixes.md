@@ -7,14 +7,14 @@ tag/asset changes, real Dota tests, remote test hosts or protocol version change
 
 The existing contract distinguishes confirmed early exit (`START_FAILED`) from
 unverifiable identity (`IDENTITY_UNVERIFIED`, process unknown, allocation retained).
-The original early-exit assertion is correct and remains unchanged. The same
+The single-code early-exit assertion is correct for a confirmed exit and remains unchanged. The same
 observable fact must not acquire a different code merely because an image query
 overlapped process exit.
 
 Windows Open first waits on a native process handle, then reads creation time and
 image identity. The child can exit between those calls. A failing image query was
 unconditionally classified as ErrIdentity even when that same handle was now
-signaled. Core correctly mapped that erroneous engine result to IDENTITY_UNVERIFIED.
+signaled. Core mapped that erroneous engine result to IDENTITY_UNVERIFIED. A second, distinct case required correcting the test fixture, as described below.
 
 The fix rechecks the **same retained handle** after an identity-read error. Only a
 successful wait proving exit yields ErrGone (already mapped to START_FAILED by
@@ -71,3 +71,35 @@ Actual run links and outcomes are reported with the delivery commit.
 Protocol v1, template schema 1 and disk format 2 are unchanged. A v0.1.1 patch
 release is recommended after both platform jobs pass; this work does not publish
 or overwrite a release.
+
+## Follow-up evidence: test precondition versus product race
+
+The first fixed run [35554990970](https://github.com/L4C99/dota2-arcade-dedicated-core/actions/runs/35554990970)
+passed full Windows test/vet/build/race but failed two early-exit assertions in
+its added repetition step. The diagnostic run
+[35555453436](https://github.com/L4C99/dota2-arcade-dedicated-core/actions/runs/35555453436)
+identified the remaining branch five times: `Access is denied.; alive=true; wait=<nil>`.
+That is **not** the same fact as a signaled process handle. The original fixture
+started an asynchronously exiting child and assumed observation would occur after
+exit. On hosted Windows the image query can be denied before exit is observable.
+Returning IDENTITY_UNVERIFIED/unknown then is correct fail-closed behavior; changing
+that to START_FAILED without an exit signal would weaken the existing contract.
+A local 1,000-repetition race run of the unsynchronized original fixture passed,
+showing why local success alone could not settle the hosted failure.
+
+The Windows acceptance fixture now waits once on the exact created process's
+native exit event before returning from its injected spawn callback. Creation time
+is checked, no process is signaled, and an unsuccessful five-second event wait is
+an explicit fixture failure. There is no sleep, operation retry, second accepted
+error code or timeout-based claim of exit. Linux's existing fixture is unchanged.
+The original START_FAILED assertion, diagnostic retention and reservation/stop
+checks are unchanged. Separate deterministic engine tests continue to require
+ErrIdentity for live query denial and identity mismatches, and ErrGone for query
+failure after confirmed exit. The production boundary-race fix remains necessary:
+the pre-fix deterministic signaled-handle test fails independently of this fixture.
+
+This distinction follows the native contract: [process termination signals its
+process object](https://learn.microsoft.com/en-us/windows/win32/procthread/terminating-a-process).
+An exit timestamp alone is not used: [GetProcessTimes documents exit-time output as
+undefined before exit](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes).
+This resolution retains protocol v1 semantics rather than broadening error acceptance.

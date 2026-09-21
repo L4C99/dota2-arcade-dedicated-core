@@ -47,8 +47,12 @@ func TestM1BusyRestartDoesNotCreateOperationOrGeneration(t *testing.T) {
 
 func TestM1EarlyExitRetainsDiagnosticAndReservation(t *testing.T) {
 	m, path, port := setupManager(t, "early")
+	fixtureError := confirmEarlyExitBeforeObservation(m)
 	id, operationID := createRoom(t, m, path, port)
 	result := waitOperation(t, m, operationID)
+	if err := fixtureError(); err != nil {
+		t.Fatalf("early-exit fixture did not confirm exit: %v", err)
+	}
 	if result["status"] != "failed" || result["instanceId"] != id || result["operationId"] != operationID {
 		t.Fatal(result)
 	}
