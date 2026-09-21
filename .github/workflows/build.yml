@@ -1,18 +1,91 @@
-name: Go validation helpers
-on: [push, pull_request]
+name: Go CI health
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
+env:
+  GOTOOLCHAIN: local
+  CGO_ENABLED: '1'
 jobs:
-  test:
+  check:
+    name: ${{ matrix.os }} / ${{ matrix.source }}
+    timeout-minutes: 25
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-2025, ubuntu-24.04]
+        source: [current, v0.1.0]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Checkout CI driver
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          go-version-file: go.mod
-      - run: go test ./...
-      - run: go vet ./...
-      - run: go build ./cmd/d2core
+          path: ci-driver
+          persist-credentials: false
+      - name: Checkout tested source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          # Test the immutable original release source using this CI driver.
+          ref: ${{ matrix.source == 'v0.1.0' && 'cf986dc49762621a681735a6a13f1941f577f43d' || github.sha }}
+          path: source
+          persist-credentials: false
+      - name: Setup fixed Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: source/go.mod
+          check-latest: false
+          cache: false # Cold-cache health checks, no old test result reuse.
+      - name: Prepare isolated Linux checks
+        if: runner.os == 'Linux'
+        id: linux
+        shell: bash
+        run: bash ci-driver/.github/ci/linux.sh prepare
+      - name: Prepare Windows checks
+        if: runner.os == 'Windows'
+        id: windows
+        shell: pwsh
+        run: ./ci-driver/.github/ci/windows.ps1 prepare
+      - name: Linux test
+        if: ${{ !cancelled() && steps.linux.outcome == 'success' }}
+        shell: bash
+        run: bash ci-driver/.github/ci/linux.sh test
+      - name: Linux vet
+        if: ${{ !cancelled() && steps.linux.outcome == 'success' }}
+        shell: bash
+        run: bash ci-driver/.github/ci/linux.sh vet
+      - name: Linux build
+        if: ${{ !cancelled() && steps.linux.outcome == 'success' }}
+        shell: bash
+        run: bash ci-driver/.github/ci/linux.sh build
+      - name: Linux race
+        if: ${{ !cancelled() && steps.linux.outcome == 'success' }}
+        shell: bash
+        run: bash ci-driver/.github/ci/linux.sh race
+      - name: Windows test
+        if: ${{ !cancelled() && steps.windows.outcome == 'success' }}
+        shell: pwsh
+        run: ./ci-driver/.github/ci/windows.ps1 test
+      - name: Windows vet
+        if: ${{ !cancelled() && steps.windows.outcome == 'success' }}
+        shell: pwsh
+        run: ./ci-driver/.github/ci/windows.ps1 vet
+      - name: Windows build
+        if: ${{ !cancelled() && steps.windows.outcome == 'success' }}
+        shell: pwsh
+        run: ./ci-driver/.github/ci/windows.ps1 build
+      - name: Windows race (external link mode)
+        if: ${{ !cancelled() && steps.windows.outcome == 'success' }}
+        shell: pwsh
+        run: ./ci-driver/.github/ci/windows.ps1 race
+      - name: Preserve check logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-${{ matrix.os }}-${{ matrix.source }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/d2core-ci-logs
+          if-no-files-found: error
+          retention-days: 14

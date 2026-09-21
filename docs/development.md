@@ -18,6 +18,8 @@
 
 固定 Go 1.27.1：`go test ./...`、`go vet ./...`、`go build ./cmd/d2core`。源码默认版本 0.1.0-dev。CI 和假引擎测试不代替真实 Dota 验收。M0—M4 的历史环境、限制和复验方式见 validation；review-fixes 是保留的复核结论，不是原始私有 review 产物。
 
+GitHub hosted CI 配置、历史失败分类与实际运行结果见 [CI 健康检查](validation/ci-health.md)。CI 同时验证当前提交和冻结的 v0.1.0 源码，采用冷缓存、全套 test/vet/build/race；Linux 使用 runner 已有独立非特权账户，Windows race 使用外部链接。CI 不接触游戏或测试服务器，不能代替真实进房/部署验收。
+
 ## 正式构建
 
 先提交并推送验收内容，从远端新 clone，detach 到确认的完整 SHA，确认工作树干净；使用独立构建缓存。执行：
