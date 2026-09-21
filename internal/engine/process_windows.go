@@ -104,7 +104,7 @@ func Open(id Identity) (*Handle, error) {
 
 func openWithIdentity(id Identity, readID func(syscall.Handle, int) (Identity, error)) (*Handle, error) {
 	if id.PID <= 0 || id.CreationTime == 0 || !filepath.IsAbs(id.Executable) {
-		return nil, ErrIdentity
+		return nil, fmt.Errorf("%w: invalid recorded identity", ErrIdentity)
 	}
 	h, err := syscall.OpenProcess(0x1000|0x100000|1, false, uint32(id.PID))
 	if errors.Is(err, syscall.Errno(87)) {
@@ -132,11 +132,11 @@ func openWithIdentity(id Identity, readID func(syscall.Handle, int) (Identity, e
 		if waitErr == nil && !alive {
 			return nil, ErrGone
 		}
-		return nil, ErrIdentity
+		return nil, fmt.Errorf("%w: native identity query: %v; alive=%t; wait=%v", ErrIdentity, err, alive, waitErr)
 	}
 	if actual.CreationTime != id.CreationTime || !strings.EqualFold(filepath.Clean(actual.Executable), filepath.Clean(id.Executable)) {
 		result.Close()
-		return nil, ErrIdentity
+		return nil, fmt.Errorf("%w: native identity mismatch (creation=%t, executable=%t)", ErrIdentity, actual.CreationTime == id.CreationTime, strings.EqualFold(filepath.Clean(actual.Executable), filepath.Clean(id.Executable)))
 	}
 	return result, nil
 }
