@@ -34,3 +34,7 @@ Windows 失败的源码依据：Manager.finish 先持久化 operation 完成；d
 目录修复后的完整运行：[35553772566](https://github.com/L4C99/dota2-arcade-dedicated-core/actions/runs/35553772566)。最终结果见该运行各 job 和保留日志；一次通过不消除上述已捕获问题。
 
 原始失败日志保存在运行日志及各 job 的 ci-* artifact（14 天）；本地审计副本放在忽略的 local/ci-audit，不把一次性 runner 诊断文件提交版本库。历史红色运行保留，不重写正式 tag 或发布包。若需修复产品才能稳定通过，应另行授权处理；本轮暂停在报告，不改核心。
+
+第二轮 35553772566：Linux current/v0.1.0 与 Windows current 的 test/vet/build/race 全通过；Windows v0.1.0 的 test/vet/build 通过，race 测试断言失败。`TestM1EarlyExitRetainsDiagnosticAndReservation`（m1_acceptance_test.go:57）预期 START_FAILED，实际为 observe 阶段 IDENTITY_UNVERIFIED，消息为 process identity could not be verified。本轮日志没有 DATA RACE 告警；是 race 模式执行的功能断言失败，不能标记为工具链不支持或自动忽略。早退进程诊断的时序/测试契约需要另行调查，目前不能仅凭此日志认定具体底层原因；产品和测试均保持冻结。
+
+收尾文档提交也会按相同工作流触发四个完整 job。后续任何绿色结果均只证明该次执行通过，不撤销上述两次失败，CI 稳定性仍待专门处理。本轮不为追绿修改调度、重试次数、测试断言或产品行为。
