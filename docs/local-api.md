@@ -1,6 +1,6 @@
 # 本地协议 v1（M1-01 契约）
 
-本文件固定本地协议；实现和验收状态见 [M1 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/main/docs/validation/m1.md) 与 [M2 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/main/docs/validation/m2.md)。模板 schemaVersion=1、磁盘 formatVersion=2、本地 protocolVersion=1 分开编号；程序 version 输出版本、Git 提交、构建时间及上述版本。未知版本/字段拒绝，不覆盖已有数据。M2 不自动迁移 M1 的格式1实验记录。
+本文件固定本地协议；实现和验收状态见 [M1 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/v0.1.1/docs/validation/m1.md) 与 [M2 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/v0.1.1/docs/validation/m2.md)。模板 schemaVersion=1、磁盘 formatVersion=2、本地 protocolVersion=1 分开编号；程序 version 输出版本、Git 提交、构建时间及上述版本。未知版本/字段拒绝，不覆盖已有数据。M2 不自动迁移 M1 的格式1实验记录。
 
 ## 访问与报文
 

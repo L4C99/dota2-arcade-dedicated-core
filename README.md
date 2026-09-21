@@ -4,6 +4,14 @@
 
 它不是游廊平台、匹配服务、远程控制面板或游戏资源下载器；不会分发地图、配置 NAT、防火墙或自动升级游戏。
 
+当前稳定版本：[v0.1.1](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.1)。当前仓库源码及文档采用 [MIT License](LICENSE)，公开供社区研究、使用、fork 和二次开发。
+
+## 维护状态与项目关系
+
+本项目主要源于作者实际 Dota 2 Arcade Dedicated Server 部署需求，并公开作为社区研究和参考资料。维护以作者实际需求和空闲时间为准，不承诺持续开发、功能请求实现或技术支持；Issues 按 best-effort 处理。
+
+这是独立社区项目，与 Valve Corporation 无隶属或官方认可关系。Dota 2、Steam 及相关商标归各自权利人所有。仓库及 Release 不包含 Dota 2、Steam、Workshop VPK 或其他游戏资产。
+
 ## v0.1.1 能做什么
 
 - 创建、查询、重启、停止并显式回收实例；保留操作结果和历史日志。
@@ -14,7 +22,7 @@
 
 ## 支持与已验证环境
 
-目标平台为 Windows/Linux amd64；真实测试环境为 Windows 10 x64、Ubuntu 24 x64。RC.2 的 n6 地图（工坊 ID `3564393242`）已完成两平台创建进房、重启重连、停止回收烟测。服务端使用经验证的联机修改版 VPK，客户端订阅资源须与其兼容。这不代表所有地图、Linux 发行版或容量规模均已验证。
+目标平台为 Windows/Linux amd64；真实测试环境为 Windows 10 x64、Ubuntu 24 x64。v0.1.1 发布前已使用 n6 地图（工坊 ID `3564393242`）完成 Windows 10 x64 与 Ubuntu 24 x64 的创建进房、重启重连、停止回收真实烟测。服务端使用经验证的联机修改版 VPK，客户端订阅资源须与其兼容。这不代表所有地图、Linux 发行版或容量规模均已验证。
 
 核心二进制不要求安装 Go/Python；Dota 服务端、运行库、Steam SDK 和地图需自行准备。管理器与 CLI 使用同一普通系统用户。Linux 环境准备见[操作说明](docs/operations.md)。
 
@@ -75,7 +83,6 @@ check 只做静态检查。创建时保存配置快照，编辑原模板不会�
 - 就绪依赖模板中已验证的日志规则；Steam 登录和真实连接仍需验证。
 - IPv6 通配监听的双栈覆盖未验证；不承诺任意网络环境、地图兼容性或容量。
 - 日志读取有大小限制，历史及创建键受保留期限约束；资源更新、监控告警和备份由运维或上层平台负责。
-- 当前仓库未提供许可证；发布二进制不等于授予额外授权。
 
 ## 文档导航
 
@@ -99,4 +106,4 @@ go vet ./...
 go build ./cmd/d2core
 ```
 
-测试和 CI 是开发验证，不等于真实游戏验收。开发/验证工具为非生产用途，M0 探针不能用于生产房间管理。源码专用资料见 [开发说明](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/main/docs/development.md)、[阶段证据索引](https://github.com/L4C99/dota2-arcade-dedicated-core/tree/main/docs/validation)；这些资料不随运行包交付。
+测试和 CI 是开发验证，不等于真实游戏验收。开发/验证工具为非生产用途，M0 探针不能用于生产房间管理。当前源码仓库的开发/验证资料见 [开发说明](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/main/docs/development.md)、[阶段证据索引](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/main/docs/validation/README.md)；这些资料不随运行包交付。

@@ -12,3 +12,14 @@ __pycache__/
 
 # Full local development handoff; public roadmap lives in docs/.
 /任务计划书.md
+
+# Local credentials and private environment files.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+secrets/
+credentials/

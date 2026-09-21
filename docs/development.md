@@ -16,17 +16,19 @@
 
 ## 开发验证
 
-固定 Go 1.27.1：`go test ./...`、`go vet ./...`、`go build ./cmd/d2core`。源码默认版本 0.1.0-dev。CI 和假引擎测试不代替真实 Dota 验收。M0—M4 的历史环境、限制和复验方式见 validation；review-fixes 是保留的复核结论，不是原始私有 review 产物。
+固定 Go 1.27.1：`go test ./...`、`go vet ./...`、`go build ./cmd/d2core`。源码默认版本以 `d2core version` 的开发标识为准，当前为 0.1.1-dev。CI 和假引擎测试不代替真实 Dota 验收。M0—M4 的历史环境、限制和复验方式见 validation；review-fixes 是保留的复核结论，不是原始私有 review 产物。
 
-GitHub hosted CI 配置、历史失败分类与实际运行结果见 [CI 健康检查](validation/ci-health.md)。CI 同时验证当前提交和冻结的 v0.1.0 源码，采用冷缓存、全套 test/vet/build/race；Linux 使用 runner 已有独立非特权账户，Windows race 使用外部链接。CI 不接触游戏或测试服务器，不能代替真实进房/部署验收。
+GitHub hosted CI 配置、历史失败分类与实际运行结果见 [CI 健康检查](validation/ci-health.md)。CI 验证当前提交；冻结 v0.1.0 的历史审计保留在验证记录中，不持续重跑旧版。当前检查采用冷缓存、全套 test/vet/build/race；Linux 使用 runner 已有独立非特权账户，Windows race 使用外部链接。CI 不接触游戏或测试服务器，不能代替真实进房/部署验收。
 
 ## 正式构建
 
 先提交并推送验收内容，从远端新 clone，detach 到确认的完整 SHA，确认工作树干净；使用独立构建缓存。执行：
 
 ```text
-go run ./tools/package --go ABS_GO --output ABS_NEW_OUTPUT --version 0.1.0 --build-time RFC3339_UTC
+go run ./tools/package --go ABS_GO --output ABS_NEW_OUTPUT --version X.Y.Z --build-time RFC3339_UTC
 ```
+
+`X.Y.Z` 替换为本次拟发布版本（当前稳定版本为 v0.1.1）；维护新包不应重建或覆盖既有 Release。
 
 工具固定 amd64、CGO_ENABLED=0、trimpath 与文件白名单，拒绝脏工作树和覆盖已有输出。不指定版本生成开发包。相同提交/工具链/时间用于复现；不要将开发目录旧二进制带入归档。
 

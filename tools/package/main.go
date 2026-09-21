@@ -21,7 +21,7 @@ import (
 
 // Explicit runtime distribution allowlist. Development evidence stays in source.
 var releaseFiles = []string{
-	"README.md", "RELEASE_NOTES.md", "docs/delivery.md", "docs/operations.md",
+	"LICENSE", "README.md", "RELEASE_NOTES.md", "docs/delivery.md", "docs/operations.md",
 	"docs/local-api.md", "docs/a2s.md", "examples/README.md",
 	"examples/template.windows.json", "examples/template.linux.json",
 	"examples/launcher/README.md", "examples/launcher/main.go",
