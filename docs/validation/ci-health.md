@@ -23,4 +23,14 @@
 
 ## 结果边界
 
-实际 hosted 验证结果将在运行结束后补充。若当前产品测试仍失败，保留日志并停止产品改动；不能通过忽略身份验证错误、跳过用例或修改测试期望取得绿色。
+首轮实际运行：[35553437892](https://github.com/L4C99/dota2-arcade-dedicated-core/actions/runs/35553437892)，CI 提交 `9f17644f93ea9185429eb31cbc6aeda3f060f25d`。
+
+- Windows current：test/vet/build/race 全部通过。
+- Windows v0.1.0：test 失败，vet/build/race 通过。`TestReliabilityStopQueuedRestartNoNewGeneration` 在 reliability_test.go:107 收到 `BUSY: instance operation is running`，当时 create operation 已为 succeeded。这不是安装/缓存失败。
+- Linux 两项：准备失败，尚未执行测试。原 runner UID 1001 的只读诊断确认 systemd 与 (sd-pam) 的 exe 不可读；切换到 nobody 后，又因 runner 工作目录父路径不可遍历导致诊断脚本打不开。后者为本轮 CI 脚本路径缺陷，已在 `800b4c52e4eb85b86a61c8554b08df35b27a5c42` 改用独立 `/tmp` 目录并复制脚本，不放宽工作目录权限。
+
+Windows 失败的源码依据：Manager.finish 先持久化 operation 完成；defer 调用 finishWorker 后才移除 workers 条目；change(restart) 在 workers 条目仍存在时返回 BUSY。waitOperation 只等待 operation 结束，因此可能遇到这一窗口。main 与 v0.1.0 的产品和测试源码相同，一份通过不能排除另一份暴露的时序问题。此问题需要另行确定产品完成语义/测试同步要求；本轮不修改产品或测试，不重试吞错、不通过延时或过滤用例隐藏失败。对 v0.1.0 的已知影响是操作完成后立即 restart 可能短暂收到 BUSY；本次未出现误杀、数据损坏或协议格式变化的证据，不据此推断其他场景全部安全。
+
+目录修复后的完整运行：[35553772566](https://github.com/L4C99/dota2-arcade-dedicated-core/actions/runs/35553772566)。最终结果见该运行各 job 和保留日志；一次通过不消除上述已捕获问题。
+
+原始失败日志保存在运行日志及各 job 的 ci-* artifact（14 天）；本地审计副本放在忽略的 local/ci-audit，不把一次性 runner 诊断文件提交版本库。历史红色运行保留，不重写正式 tag 或发布包。若需修复产品才能稳定通过，应另行授权处理；本轮暂停在报告，不改核心。
