@@ -1,5 +1,7 @@
 # Dota 2 游廊专服核心
 
+Dota 2 Arcade Dedicated Server lifecycle manager for Windows and Linux.
+
 面向启动器和节点平台的本机 Dota 2 专服管理核心。它管理游戏进程、实例记录和本地调用，提供 Windows/Linux CLI 与同用户本地 API。
 
 它不是游廊平台、匹配服务、远程控制面板或游戏资源下载器；不会分发地图、配置 NAT、防火墙或自动升级游戏。
@@ -59,6 +61,28 @@ d2core stop INSTANCE --data-dir ABS_DATA --json
 `KEY` 标识一次创建意图：同一请求重试沿用原键与参数，新房间使用新键。ID 从响应读取。create/restart/stop 返回受理不等于完成，必须轮询各自的 operation；ready 还需实际客户端进房验证。stop 成功应确认 `reclaimed / stopped / cleanup=complete`。failed 实例也需显式 stop。
 
 自动端口默认 27015–27064；create 可加 `--port 27016`，restart 沿用原端口。管理器退出不会停止游戏。全部参数、帮助、A2S 和错误处置见[操作说明](docs/operations.md)；运行 `d2core help` 或 `d2core help create` 查看帮助。
+
+## 进入房间
+
+创建操作成功后，确认 `status` 为 `lifecycle=active`、`process=running`、`room=ready`，读取其中的 `port`。这是实例实际使用的本机游戏端口；玩家进房目标须结合实际可达地址及外部映射端口确定。d2core 不推导公网地址，也不配置 NAT、端口映射、防火墙或 DNS。`room=ready` 只表示满足模板定义的就绪条件，不保证公网可达或真人能进房；首次部署仍需真实 Dota 客户端验证。
+
+基础方式是在 **Dota 控制台**执行（以下为文档示例地址）：
+
+```text
+connect game.example.com:27017
+connect 203.0.113.10:27017
+```
+
+`connect <host>:<port>` 已实测支持 IP 和可解析域名；有 NAT 时使用玩家实际可达的外部端口。它不依赖 d2core A2S 配置，应始终作为兜底方式保留。
+
+另外两类入口为 `steam://`（Steam）和 `steamchina://`（蒸汽平台）协议一键进房，需要服务端 A2S 正常，并分别验证客户端唤起行为。当前已验证的 Steam 方式使用 IP，不应直接复用 connect 的任意域名 host；蒸汽平台的独立 IP/域名兼容性未验证。完整格式为 `steam://connect/<IP>:<PORT>` 和 `steamchina://connect/<IP>:<PORT>`，将 IP 和 PORT 替换为玩家实际可达的地址与端口（尖括号不保留）。例如：
+
+```text
+steam://connect/203.0.113.10:27017
+steamchina://connect/203.0.113.10:27017
+```
+
+以上使用文档示例 IP，不能直接连接实际房间。浏览器冷启动与内外端口不同均有兼容限制，详见 [A2S 与协议进房](docs/a2s.md)。
 
 ## 配置模板
 

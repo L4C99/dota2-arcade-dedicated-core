@@ -1,6 +1,6 @@
 # 本地核心操作
 
-真实引擎验收状态见 [M1 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/v0.1.1/docs/validation/m1.md)。M0—M4既定范围已完成验收；接管现有生产房间仍须单独部署授权。游戏、运行库和两端匹配的地图资源由使用者准备；核心不下载或更新它们。
+历史真实引擎验收资料见 [M1 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/v0.1.1/docs/validation/m1.md)。首次部署仍须完成实际客户端进房验证。游戏、运行库和两端匹配的地图资源由使用者准备；核心不下载或更新它们。
 
 默认使用数字工坊 ID，资源布局与 n6 规则见 [模板说明](../examples/README.md)。本说明面向 v0.1.1；历史候选差异仅供旧包排障参考。
 
@@ -8,7 +8,7 @@
 
 正式运行使用下表的管理命令及独立 A2S 工具。m0-inspect 仅为兼容保留的M0 历史诊断入口（非生产用途），部署无需使用。
 
-本表按 v0.1.1 发布准备版本的 `cmd/d2core/main.go` 注册项核对；RC.1 与 RC.2 的公开业务命令一致，帮助行为差异见下文。ABS 表示本平台绝对路径；INSTANCE 是 i_ 开头实例 ID，OPERATION 是 o_ 开头操作 ID。尖括号不是命令的一部分。
+本表按 v0.1.1 的 `cmd/d2core/main.go` 注册项核对。ABS 表示本平台绝对路径；INSTANCE 是 i_ 开头实例 ID，OPERATION 是 o_ 开头操作 ID。尖括号不是命令的一部分。
 
 | 命令 | 必填参数/位置参数 | 可选参数及默认值 | 用途 |
 | --- | --- | --- | --- |
@@ -42,9 +42,13 @@ a2s 的 dota-dir 是包含 game 子目录的安装根目录，不是 game/dota�
 
 ### 帮助与退出码
 
-v0.1.1 沿用 RC.2 的帮助行为，支持 `d2core help`、`d2core --help`、`d2core -h` 输出完整命令列表，帮助退出0；无参数输出完整用法但仍退出2。`d2core help logs` 或 `d2core logs --help` 查看参数，A2S 用 `d2core a2s enable --help`。RC.1 原包没有顶层help，无参数提示不完整，子命令帮助通常退出2、m0-inspect帮助退出1；不要把旧包帮助退出码误判为启动失败。
+v0.1.1 支持 `d2core help`、`d2core --help`、`d2core -h` 输出完整命令列表，帮助退出0；无参数输出完整用法但仍退出2。`d2core help logs` 或 `d2core logs --help` 查看参数，A2S 用 `d2core a2s enable --help`。
 
 正常管理调用退出0表示请求成功，create/restart/stop 仍需查询 operation；执行错误通常退出1，CLI用法错误通常退出2。m0-inspect 使用独立错误路径，参数/检查失败返回1。
+
+### 历史候选版本说明
+
+RC.1 与 RC.2 的公开业务命令一致；RC.2 的帮助行为由正式版本沿用。RC.1 原包没有顶层help，无参数提示不完整，子命令帮助通常退出2、m0-inspect帮助退出1；不要把旧包帮助退出码误判为启动失败。
 
 ### 随包 launcher-example
 
@@ -144,7 +148,7 @@ d2core logs <instanceId> --tail 200 --data-dir <相同数据绝对路径> --json
 d2core restart <instanceId> --data-dir <相同数据绝对路径> --json
 ```
 
-轮询 operation 至 succeeded，再核对 status 的 running/ready；实际客户端执行 `connect <可达服务器地址>:<游戏端口>`，确认操作正常。restart 会断开房间，须查询返回的新 operationId，成功后再次连接。随后留在房间，在 serve 终端 Ctrl+C；确认游戏仍正常，再用原用户、原 data-dir 和原环境启动 serve，查询原实例，不重新 create。重开终端时要重新设置变量，并保存/取回实际 ID；可用 list 查找，不把创建 key 当实例 ID。
+轮询 create 的 operation 到 terminal；仅 succeeded 后继续核对 status 为 active/running/ready。读取 status.port，再按下节确定玩家可达 host/port，用真实客户端进房，确认地图加载完成且能够正常操作。操作失败时保留日志并按 failed 实例流程显式回收，不继续 restart。restart 会断开房间，须查询返回的新 operationId，成功后再次连接。随后留在房间，在 serve 终端 Ctrl+C；确认游戏仍正常，再用原用户、原 data-dir 和原环境启动 serve，查询原实例，不重新 create。重开终端时要重新设置变量，并保存/取回实际 ID；可用 list 查找，不把创建 key 当实例 ID。
 
 最后显式停止：
 
@@ -155,6 +159,24 @@ d2core status <instanceId> --data-dir <相同数据绝对路径> --json
 ```
 
 确认 succeeded 与 reclaimed/stopped/cleanup=complete 后，再退出管理器，保留日志。已回收实例不能 restart；下次开房以新 key 创建新实例。同一次不确定请求则保留原 key 重试，不因 CLI 超时另开一房。
+
+## 真实进房与网络验收
+
+完整顺序为：create → 查询 operation 到 terminal（须 succeeded）→ status 为 `lifecycle=active / process=running / room=ready` → 读取 `status.port` → 确定玩家实际可达 host/port → 客户端进入 → 地图加载完成 → 正常操作 → stop → 查询 stop operation 到 terminal（须 succeeded）→ status 为 `reclaimed / stopped / cleanup=complete`。包含 restart 的烟测按上节在重启成功后再次进房；不要把受理响应当作完成。
+
+`status.port` 是本机实际游戏端口。无端口转换时，结合玩家可达 IP 或域名连接；存在 NAT 时，使用部署方配置的外部端口。例如 `30017 -> 27017` 时，玩家控制台使用 `connect public.example.com:30017`，不是直接照抄 status.port。这里是文档示例域名。核心不推导公网 IP、DNS 或映射，也不配置防火墙。
+
+首次部署或网络变化后分别记录以下结果，不把三种方式合并为一次“进房通过”。Steam / steamchina 协议入口验收仅在部署方实际启用且已有经验证的完整 URI 时进行；未启用或无此 URI 时记为未验收，不计为通过：
+
+| 验收项 | 操作与记录 |
+| --- | --- |
+| 基础进房（必测） | 在 Dota 控制台执行 `connect <host>:<port>`；IP、可解析域名均已实测支持，确认实际公网映射可达、地图加载完成且可操作。此方式不依赖 d2core A2S 配置，始终保留为兜底。 |
+| Steam 入口（满足上述前提时） | 独立确认服务端 A2S 查询正常；当前已验证方式使用 IP。使用部署方已经验证的完整 URI，记录本机/外部端口、Steam 是否已启动，以及浏览器与 Win+R 唤起结果；进入后确认加载和操作。 |
+| 蒸汽平台入口（满足上述前提时） | 单独验证 A2S 和部署方已经验证的完整 steamchina URI，不沿用 Steam 的成功结论；独立 IP/域名行为未验证。记录同样的端口、启动状态、浏览器/Win+R 结果以及实际进房结果。 |
+
+以下仅说明 URI 格式及文档示例，不表示仓库提供了针对实际部署已经验证的完整协议 URI。协议入口使用 `steam://connect/<IP>:<PORT>` 或 `steamchina://connect/<IP>:<PORT>`，替换为实际可达 IP 和端口，不保留尖括号；完整示例见 [A2S 说明](a2s.md)。不要直接将 connect 支持的任意域名当成协议 URI 的等价 host。A2S 正常只是服务端前提；浏览器冷启动失败不一定是服务器故障，可先正常启动 Steam 或用 Win+R 执行已有完整 URI。内外端口不同时协议入口可能失败，需要单独实测；优先保持公网与本机游戏端口一致的建议不构成协议规范或成功保证。完整证据边界及能力矩阵见 [A2S 与协议进房](a2s.md)。
+
+保存实例/operation ID、status、日志和各入口结果。Ready 仅表示满足模板就绪条件，不保证公网或真人连接。任何失败都应保留证据并显式 stop；只有回收完成后再把房间作为新意图创建。
 
 ## 接口与状态说明
 
@@ -187,13 +209,13 @@ d2core list --data-dir <数据绝对路径> --json
 
 普通创建/重启不修改 gameinfo 或 VAC 配置。本地管理不监听 TCP；Windows 用命名管道，Linux 用 Unix socket，不需要给管理 API 开放公网防火墙端口。游戏端口的外部可达性应单独验证。
 
-M3 可用 serve --port-min 27015 --port-max 27064 --history-days 7 --min-free-mib 1024 指定自动端口、回收后历史保留天数和磁盘余量阈值；create 省略 --port 即自动选择。历史到期后实例、操作和创建键一起移除，旧ID返回NOT_FOUND，调用方的新意图始终使用唯一键。缩短保留期前备份需要长期留存的证据。list 的storage返回最近空间检查及清理错误；在线每分钟维护，离线期间以运维磁盘告警兜底。活跃日志没有硬大小上限，不因日志容量停止房间。
+可用 serve --port-min 27015 --port-max 27064 --history-days 7 --min-free-mib 1024 指定自动端口、回收后历史保留天数和磁盘余量阈值；create 省略 --port 即自动选择。历史到期后实例、操作和创建键一起移除，旧ID返回NOT_FOUND，调用方的新意图始终使用唯一键。缩短保留期前备份需要长期留存的证据。list 的storage返回最近空间检查及清理错误；在线每分钟维护，离线期间以运维磁盘告警兜底。活跃日志没有硬大小上限，不因日志容量停止房间。
 
 运行前提：Linux专服需要可加载的steamclient.so等游戏依赖，可单独准备SteamCMD运行库，不要求核心运行时安装Go。Windows新用户需要Steam SDK能找到该用户可用的Steam安装及DLL路径。具体准备依安装方式而定；核心不自动改注册表或安装运行库。若用独立cfg挂载做隔离，必须保留安装自带默认cfg/vcfg，并确认目录可由运行用户写入。地图ready不代表Steam认证完成或客户端可达，仍需独立核验网络及实际进房。
 
-## 修复候选升级与人工回收（N-1 / N-2）
+## 升级遗留记录与人工回收
 
-以下限制适用于以1a0b79c为产品代码基线的RC。独立复核未发现确认的RC阻塞项；这些说明不新增自动删除或修复行为。
+以下说明区分失败实例的当前回收要求与旧记录的升级限制，不新增自动删除或修复行为。
 
 ### failed 实例必须显式回收
 
@@ -208,7 +230,7 @@ M3 可用 serve --port-min 27015 --port-max 27064 --history-days 7 --min-free-mi
 
 当前cfg清理要求父目录对象、文件对象及内容指纹一致。旧format2记录缺乏cfgOwnership、外来同名文件或替换后的对象会被保留，可能停在cleanup=failed。内容相同不代表归属相同。应备份状态和相关文件，核对实际路径、对象归属、相关进程已退出且无人使用后，由运维决定是否移走或删除确切文件，再重试同一实例stop；不要递归删除data-dir或整个cfg目录。
 
-N-1：升级前经历“已尝试spawn、身份未落盘、子进程已退出”的旧记录，可能同时缺少InputOwnership与Identity，却留下stdin.fifo。新版本不会推测该FIFO归属；即使实例显示reclaimed/cleanup=complete，该遗留文件仍可能使到期retention报CLEANUP_FAILED，保留该实例历史、操作与创建键。只有人工核实确切run目录、FIFO类型、所属实例与无进程使用后，才可处理该单个遗留FIFO；之后等待在线维护重试并检查list.storage清理结果。无法证明归属则保留并告警。不得扩大白名单或批量删除所有FIFO。该限制不妨碍其他实例运行，也不因升级自动消失。
+升级前经历“已尝试spawn、身份未落盘、子进程已退出”的旧记录，可能同时缺少InputOwnership与Identity，却留下stdin.fifo。新版本不会推测该FIFO归属；即使实例显示reclaimed/cleanup=complete，该遗留文件仍可能使到期retention报CLEANUP_FAILED，保留该实例历史、操作与创建键。只有人工核实确切run目录、FIFO类型、所属实例与无进程使用后，才可处理该单个遗留FIFO；之后等待在线维护重试并检查list.storage清理结果。无法证明归属则保留并告警。不得扩大白名单或批量删除所有FIFO。该限制不妨碍其他实例运行，也不因升级自动消失。
 
 ### portCheck 的判定边界
 

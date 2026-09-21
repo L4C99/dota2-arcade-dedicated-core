@@ -1,6 +1,6 @@
-# 本地协议 v1（M1-01 契约）
+# 本地协议 v1
 
-本文件固定本地协议；实现和验收状态见 [M1 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/v0.1.1/docs/validation/m1.md) 与 [M2 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/v0.1.1/docs/validation/m2.md)。模板 schemaVersion=1、磁盘 formatVersion=2、本地 protocolVersion=1 分开编号；程序 version 输出版本、Git 提交、构建时间及上述版本。未知版本/字段拒绝，不覆盖已有数据。M2 不自动迁移 M1 的格式1实验记录。
+本文件定义当前本地协议；历史实现与验收资料见 [M1 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/v0.1.1/docs/validation/m1.md) 与 [M2 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/v0.1.1/docs/validation/m2.md)。模板 schemaVersion=1、磁盘 formatVersion=2、本地 protocolVersion=1 分开编号；程序 version 输出版本、Git 提交、构建时间及上述版本。未知版本/字段拒绝，不覆盖已有数据。当前版本不自动迁移格式1实验记录。
 
 ## 访问与报文
 
@@ -34,7 +34,7 @@ operation 增加诊断字段 phase：accepted/preparing/spawning/observing/stopp
 
 ## CLI 与请求参数
 
-所有命令支持 --json；stdout 仅输出一份结构化结果，诊断写 stderr。退出码 0 表示请求成功（变更仅受理），1 为请求或执行错误，2 为 CLI 用法错误。默认无需 --json 也使用同一 JSON 响应，便于管道调用。M1 CLI 不默认等待异步完成。
+所有命令支持 --json；stdout 仅输出一份结构化结果，诊断写 stderr。退出码 0 表示请求成功（变更仅受理），1 为请求或执行错误，2 为 CLI 用法错误。默认无需 --json 也使用同一 JSON 响应，便于管道调用。CLI 不默认等待异步完成。
 
 | 命令 / method | 参数 | 结果 |
 | --- | --- | --- |
@@ -53,7 +53,7 @@ operation 增加诊断字段 phase：accepted/preparing/spawning/observing/stopp
 
 三个变更命令统一返回上述 ID 和 state，state 是受理时的真实当前状态，不是完成预测。status 的 result 为实例对象：instanceId、templateName、port、generation、lifecycle、process、room、cleanup、currentOperationId、createdAt、updatedAt、evidence、bindings、error。list 的 result 为 {instances:[实例对象],storage:{checkedAt,freeBytes,minFreeBytes,historyDays,error}}；storage 是最近在线维护的观测，非实时容量保证；operation 的 result 为操作对象，字段为上表所列，另含 operationId。不存在的可选证据/error/finishedAt 使用 null；数组为空时使用 []。所有时间使用 UTC RFC3339Nano 字符串。
 
-evidence 为 {generation,observedAt,source,matched,valid}：source 为本代日志绝对路径，matched 为已命中的规则及首次 observedAt 列表；规则与适用地图保存在模板快照中。未读取本代日志时为 null；退出或身份不明确后 valid=false，room 不再为 ready，历史证据仍可诊断。bindings 为 {protocol,address,port,pid,observedAt} 数组，只表达已核验进程的实际监听，不表示公网可达；不以 0.0.0.0 生成客户端连接地址。
+evidence 为 {generation,observedAt,source,matched,valid}：source 为本代日志绝对路径，matched 为已命中的规则及首次 observedAt 列表；规则与适用地图保存在模板快照中。未读取本代日志时为 null；退出或身份不明确后 valid=false，room 不再为 ready，历史证据仍可诊断。bindings 为 {protocol,address,port,pid,observedAt} 数组，只表达已核验进程的实际监听，不表示公网可达；不以 0.0.0.0 生成客户端连接地址。实例 `port` 表示本机实际游戏端口，不推导 public / mapped port；玩家可达地址和映射由部署方提供，见 [进房与网络验收](operations.md#真实进房与网络验收)。
 
 端口同时检查管理端分配及同号 TCP/UDP 实际绑定，启动后再次核对监听归属；预检不是抢占保证。重启遇到外部占用失败并保留原分配，不能换号。附加实际端口进入诊断和冲突检查，不全部当成公网预约端口。
 
@@ -77,9 +77,9 @@ evidence 为 {generation,observedAt,source,matched,valid}：source 为本代日�
 
 模板保留 name、executable、workingDirectory、arguments、cfg.directory、cfg.lines，新增 readiness 和 timeouts。所有路径按目标操作系统验证，文件/目录存在性和类型静态检查；check 不写入目录。模板为受信任本机配置，不支持安全执行不可信模板。
 
-readiness.successAll 是必须全部命中的非空字面字符串列表；failureAny 是失败字面字符串列表。匹配仅扫描本代 engine.log，失败优先，不使用旧日志或固定延时推断就绪；缺证据持续 loading 到超时。M0 地图级组合只适用于已测地图。列表各最多32项，每项最多512字节、非空；不使用正则表达式。
+readiness.successAll 是必须全部命中的非空字面字符串列表；failureAny 是失败字面字符串列表。匹配仅扫描本代 engine.log，失败优先，不使用旧日志或固定延时推断就绪；缺证据持续 loading 到超时。经验证的地图级组合只适用于对应已测地图。列表各最多32项，每项最多512字节、非空；不使用正则表达式。
 
-timeouts 包含 startupSeconds / stopSeconds / forceSeconds，省略或0使用120/10/5；负数或大于3600拒绝。M1 唯一 CLI 配置覆盖是 port，最终规范化模板和 port 一起持久化；重启不用重新读取源模板。快照不冻结 VPK/额外 exec 内容。
+timeouts 包含 startupSeconds / stopSeconds / forceSeconds，省略或0使用120/10/5；负数或大于3600拒绝。模板配置的唯一 CLI 覆盖是 port，最终规范化模板和 port 一起持久化；重启不用重新读取源模板。快照不冻结 VPK/额外 exec 内容。
 
 参数数组至少且仅一次包含相邻项 -port / {{game_port}}、-con_logfile / {{log_path}}、+exec / {{cfg_name}}；保持原有顺序，不通过 shell，不隐式注入 VAC/hibernate。保留 instance_id、game_port、cfg_name、log_path 四种占位符，路径字段/name 不允许占位符，未知/残缺占位符拒绝。arguments 中占位符作为完整参数，cfg 中可嵌入行内；cfg 每项只允许一行，不接受 NUL/CR/LF，双引号须闭合。
 
@@ -87,15 +87,15 @@ instance_id/game_port/cfg_name 为核心生成的安全 ASCII token。log_path �
 
 ## 幂等与保留
 
-创建键为1–128字节 ASCII 字母、数字、点、下划线或短横线；作用域为同一 data-dir，同用户。请求指纹包含规范化模板路径及请求 port；同键同请求返回原 instanceId/operationId，不重读修改后的模板或开新房；同键不同请求返回 IDEMPOTENCY_CONFLICT。M1 固定并实现基本契约；并发、落盘窗口及重启恢复由 M2 全面验收。
+创建键为1–128字节 ASCII 字母、数字、点、下划线或短横线；作用域为同一 data-dir，同用户。请求指纹包含规范化模板路径及请求 port；同键同请求返回原 instanceId/operationId，不重读修改后的模板或开新房；同键不同请求返回 IDEMPOTENCY_CONFLICT。并发、落盘窗口及重启恢复的历史验收见前述验证资料。
 
-M3 默认从成功回收时间起保留7天，可由 serve --history-days 配置为1..3650天。到期后只清理已回收实例的日志和配置副本，实例、操作与创建键在同一状态提交中移除；任何未完成清理/未确认停止的实例不自动过期。保留期内旧键始终返回原结果，到期并清理后旧ID返回NOT_FOUND，旧键可视为新请求，因此调用方必须为新意图使用唯一键，不能无限期重试。清理失败保留记录并重试，不提前淘汰仍在保留期内的结果。缩短history-days会影响已有历史的到期时间，应先保存需要长期保留的证据。调用者按原键重试超时请求，再查询操作；不要改用新键来掩盖不确定结果。
+默认从成功回收时间起保留7天，可由 serve --history-days 配置为1..3650天。到期后只清理已回收实例的日志和配置副本，实例、操作与创建键在同一状态提交中移除；任何未完成清理/未确认停止的实例不自动过期。保留期内旧键始终返回原结果，到期并清理后旧ID返回NOT_FOUND，旧键可视为新请求，因此调用方必须为新意图使用唯一键，不能无限期重试。清理失败保留记录并重试，不提前淘汰仍在保留期内的结果。缩短history-days会影响已有历史的到期时间，应先保存需要长期保留的证据。调用者按原键重试超时请求，再查询操作；不要改用新键来掩盖不确定结果。
 
 自动范围默认27015–27064，由管理端serve --port-min/--port-max配置，最大4096个候选；显式端口不受该范围限制。请求指纹中的自动端口为0，已分配结果不随范围改变；自动与显式请求复用同键会冲突。
 
 默认磁盘余量阈值1024MiB，可通过--min-free-mib配置。新意图和新的运行代次检查data-dir与cfg所在卷；空间不足返回INSUFFICIENT_STORAGE，原请求查询/重试和stop仍允许。每分钟最多清理16份到期历史并更新storage状态。活跃日志不截断、不轮转、不因容量自动停服，管理端离线期间由运维磁盘告警兜底；存在检查后外部写满的竞态，写入失败仍按持久化故障处理。状态文件64MiB硬上限保持，不提前删除保留期内记录以强行接受新请求。
 
-### 附加端口检查结果（CJ-07）
+### 附加端口检查结果
 
 status/list实例增加portCheck（首次观察前null），格式为{status,notes,conflicts}。status为complete/partial/conflict；notes明确列出未分类UDP、身份或绑定暂不可读的其他实例、未确定双栈覆盖等，conflicts列出确认冲突。旧历史可能无此字段。与bindings一样，这是最近一次本机观察，不是永久保证。
 

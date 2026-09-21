@@ -1,5 +1,7 @@
 # 技术决策
 
+本文保留研发阶段的设计选择与当时验证状态，包含 M0—M4 / CJ 历史编号，不代表当前部署状态。当前规格与操作以 [本地协议](local-api.md)、[操作说明](operations.md) 为准；历史证据见 [验证索引](validation/README.md)。
+
 ## 工具链与实现边界
 
 开发工具链为 Go 1.27.1。Windows 本地管道采用微软官方 [go-winio v0.6.2](https://github.com/microsoft/go-winio/releases/tag/v0.6.2)，系统 API 使用 golang.org/x/sys v0.10.0；版本及校验和锁定在 go.mod/go.sum。避免自行实现易出错的重叠 IO 取消与 deadline；已核对库源码设置 FILE_PIPE_REJECT_REMOTE_CLIENTS，并执行真实匿名令牌拒绝测试。PowerShell/Python 仅用于开发与隔离验收，不是最终使用者的安装前提。
