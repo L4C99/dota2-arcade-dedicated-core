@@ -1,13 +1,21 @@
-# v0.1.0 Release Notes
+# v0.1.1 Release Notes
 
-正式版本：v0.1.0。发布资产及最终产物检查结果随 GitHub Release 提供；完整提交、版本与构建时间以随包 BUILD.json 和 `d2core version --json` 交叉核对。
+v0.1.1 是 Windows/Linux amd64 本地专服核心补丁版本。正式资产为 `d2core-v0.1.1-windows-amd64.zip`、`d2core-v0.1.1-linux-amd64.zip` 及 SHA256。完整提交和构建时间以随包 BUILD.json 与 `d2core version --json` 交叉核对。
 
-首个正式交付范围为 Windows/Linux amd64 本地专服核心：创建、重启、停止回收、多实例端口分配、异步操作、创建幂等、状态/日志、管理器恢复与本地 API。协议版本 1、模板版本 1、磁盘格式 2。
+## 修复
 
-相对已验收 RC.2，本轮仅整理首页、正式文档、开发工具标识和包文件白名单；核心生命周期、协议和安全行为未变。M0—M4 与独立复核资料保留在源码仓库，不进入运行包。自动测试保留，不分发测试源码。
+- Windows 早退进程错误分类：身份读取失败时，仅在确认原进程已退出后归类为 START_FAILED；尚未确认退出时保持 IDENTITY_UNVERIFIED，不放宽身份核验。
+- operation 已对外 terminal 后，后续合法 restart 不再因为旧 worker 内部收尾窗口偶发 BUSY；保留内部收尾顺序，不依赖客户端 sleep/retry。
+- Windows/Linux CI 覆盖完整 test、vet、build、race，以及时序回归重复检查。Windows race 使用已验证的 external-link 条件。
 
-Windows 10 x64、Ubuntu 24 x64 已完成 RC.2 n6 的创建进房、重启重连、停止回收。正式包从远端固定提交的干净 checkout 新构建，发布前执行产物级检查及既定 test/vet/race。核心行为冻结，本次不重跑完整 M0—M4 或真实 Dota 验收；RC.2 进房结果不冒充正式包真实进房结果。最终结果见随 Release 提供的 RELEASE-VALIDATION.md。
+## 标准托管模板
 
-正式资产：`d2core-v0.1.0-windows-amd64.zip`、`d2core-v0.1.0-linux-amd64.zip` 及校验文件。程序与 BUILD.json 的 version 必须为 `0.1.0`，提交和构建时间一致，gitDirty=false。不得复用开发目录旧二进制或覆盖 RC 标签/产物。
+两个标准 example 保留 `sv_hibernate_when_empty 0`，新增 `dota_quit_after_game 0`。空服不依赖自动 hibernate，一局结束后不依赖 Dota 自行退出，实例由外部管理端显式 stop → reclaim。这是可按场景调整的推荐部署策略，不是协议硬要求，核心不强制注入。
 
-升级前停止并回收实例、备份历史。格式 1 不自动迁移；不更新游戏/VPK。限制包括本机同用户调用、ASCII 路径、地图及运行库自行准备、ready 不代替进房确认、IPv6 通配双栈未验证、无容量承诺。完整限制见 README 与操作说明。
+## 兼容与升级
+
+protocolVersion=1、模板 schemaVersion=1、磁盘 formatVersion=2 均不变。v0.1.0 既有身份核验、PID 复用防护、停止/恢复、幂等和持久化安全约束保持。产品逻辑真实复验基线为 a174332d7a9b6008fcc820d05d38929a88c9dbc0；之后仅整理示例、说明与版本元数据。最终自动验证和 example 双平台真实烟测结果随 Release 验证记录提供。
+
+升级前显式停止并回收实例，备份所需历史，再替换运行包。格式 1 不自动迁移，不由核心更新 Dota 或 VPK。历史 v0.1.0 和 RC 标签、产物不覆盖。
+
+既有已知限制继续有效：仅本机同用户管理、ASCII 路径、运行库与地图自行准备、Ready 不代表真人可进房、IPv6 通配双栈未验证、无容量承诺。m0-inspect 仅为 M0 历史诊断、非生产用途，正式外部集成不依赖它。详见 README 与运维说明。

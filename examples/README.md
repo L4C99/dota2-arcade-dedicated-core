@@ -1,4 +1,4 @@
-# 配置示例
+# v0.1.1 配置示例
 
 [Windows](template.windows.json) 和 [Linux](template.linux.json) 展示模板 v1。字段、错误和占位符规则以 [本地协议](../docs/local-api.md) 为准。配置模块已提供静态校验和展开；正式生命周期的实现与实机验收状态见 [M1 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/main/docs/validation/m1.md)，示例本身不表示已经通过进房验收。
 
@@ -27,3 +27,7 @@
 M1 使用显式端口。示例保留默认 VAC 和 `sv_hibernate_when_empty 0`，核心不向自定义模板强制注入这些设置。Linux 运行库与资源权限须由使用者准备；此示例不要求 root 或 systemd。
 
 Linux 启动管理器前需要准备同一普通用户可访问的 Steam SDK、HOME 和动态库搜索路径；游戏继承管理器环境，恢复管理器时也要保留这些设置。完整命令见 [操作说明](../docs/operations.md#linux-运行环境)。不要只确认库文件存在，还要确认该用户可以遍历全部父目录。
+
+## 托管实例生命周期策略
+
+两个标准模板保留 `sv_hibernate_when_empty 0`，并显式设置 `dota_quit_after_game 0`：空服不依赖 Dota 自动 hibernate，一局结束后不依赖 Dota 自行退出，由 d2core / 上层管理端显式执行 stop → reclaim。它们是可按场景修改的示例部署策略，不是 protocol v1 或模板 schema 的硬要求，核心不强制注入这些 cvar。未加入其他 quit / hibernate 参数。

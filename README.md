@@ -4,7 +4,7 @@
 
 它不是游廊平台、匹配服务、远程控制面板或游戏资源下载器；不会分发地图、配置 NAT、防火墙或自动升级游戏。
 
-## v0.1.0 能做什么
+## v0.1.1 能做什么
 
 - 创建、查询、重启、停止并显式回收实例；保留操作结果和历史日志。
 - 自动分配指定范围内的游戏端口，也可显式指定端口；支持多个实例。
@@ -20,7 +20,7 @@
 
 ## 下载与快速开始
 
-普通用户优先从 [GitHub Releases](https://github.com/L4C99/dota2-arcade-dedicated-core/releases) 下载对应平台二进制。v0.1.0 正式资产以该页面及校验清单为准；不要把 RC 包改名当作正式版。v0.1.0 文件名、版本核验和发布门槛见[交付说明](docs/delivery.md)与[Release Notes](RELEASE_NOTES.md)。
+普通用户优先从 [GitHub Releases](https://github.com/L4C99/dota2-arcade-dedicated-core/releases) 下载对应平台二进制。v0.1.1 正式资产以该页面及校验清单为准；不要把 RC 包改名当作正式版。v0.1.1 文件名、版本核验和发布门槛见[交付说明](docs/delivery.md)与[Release Notes](RELEASE_NOTES.md)。
 
 1. 校验 ZIP 的 SHA256，解压到全新可写 ASCII 路径；Linux 确认 `d2core` 和 `launcher-example` 有执行权限。
 2. 运行 `d2core version --json`，核对版本、提交、构建时间与 `BUILD.json`，`gitDirty` 应为 false。
@@ -81,7 +81,7 @@ check 只做静态检查。创建时保存配置快照，编辑原模板不会�
 
 | 文档 | 内容 |
 | --- | --- |
-| [Release Notes](RELEASE_NOTES.md) | v0.1.0 范围、版本与发布状态 |
+| [Release Notes](RELEASE_NOTES.md) | v0.1.1 范围、版本与发布状态 |
 | [交付说明](docs/delivery.md) | 包内容、校验、正式发布验收 |
 | [操作说明](docs/operations.md) | 完整 CLI、端口、恢复、升级与失败回收 |
 | [模板说明](examples/README.md) | Windows/Linux 模板和资源布局 |
@@ -91,7 +91,7 @@ check 只做静态检查。创建时保存配置快照，编辑原模板不会�
 
 ## 开发与源码构建（源码仓库）
 
-普通部署无需执行本节。固定 Go 1.27.1，源码构建默认标识为 `0.1.0-dev`；正式版本由打包工具注入，不通过修改核心逻辑实现。
+普通部署无需执行本节。固定 Go 1.27.1，源码构建默认标识为 `0.1.1-dev`；正式版本由打包工具注入，不通过修改核心逻辑实现。
 
 ```sh
 go test ./...

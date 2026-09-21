@@ -20,7 +20,8 @@
     "lines": [
       "hostname \"{{instance_id}}\"",
       "map example_map gamemode=15 customgamemode=\"REPLACE_WITH_WORKSHOP_ID\" nomapvalidation=1",
-      "sv_hibernate_when_empty 0"
+      "sv_hibernate_when_empty 0",
+      "dota_quit_after_game 0"
     ]
   },
   "readiness": {

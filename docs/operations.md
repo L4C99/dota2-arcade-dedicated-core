@@ -2,13 +2,13 @@
 
 真实引擎验收状态见 [M1 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/main/docs/validation/m1.md)。M0—M4既定范围已完成验收；接管现有生产房间仍须单独部署授权。游戏、运行库和两端匹配的地图资源由使用者准备；核心不下载或更新它们。
 
-默认使用数字工坊 ID，资源布局与 n6 规则见 [模板说明](../examples/README.md)。本说明面向 v0.1.0；历史候选差异仅供旧包排障参考。
+默认使用数字工坊 ID，资源布局与 n6 规则见 [模板说明](../examples/README.md)。本说明面向 v0.1.1；历史候选差异仅供旧包排障参考。
 
 ## 完整命令与参数索引
 
 正式运行使用下表的管理命令及独立 A2S 工具。m0-inspect 仅为兼容保留的M0 历史诊断入口（非生产用途），部署无需使用。
 
-本表按 v0.1.0 发布准备版本的 `cmd/d2core/main.go` 注册项核对；RC.1 与 RC.2 的公开业务命令一致，帮助行为差异见下文。ABS 表示本平台绝对路径；INSTANCE 是 i_ 开头实例 ID，OPERATION 是 o_ 开头操作 ID。尖括号不是命令的一部分。
+本表按 v0.1.1 发布准备版本的 `cmd/d2core/main.go` 注册项核对；RC.1 与 RC.2 的公开业务命令一致，帮助行为差异见下文。ABS 表示本平台绝对路径；INSTANCE 是 i_ 开头实例 ID，OPERATION 是 o_ 开头操作 ID。尖括号不是命令的一部分。
 
 | 命令 | 必填参数/位置参数 | 可选参数及默认值 | 用途 |
 | --- | --- | --- | --- |
@@ -42,7 +42,7 @@ a2s 的 dota-dir 是包含 game 子目录的安装根目录，不是 game/dota�
 
 ### 帮助与退出码
 
-v0.1.0 沿用 RC.2 的帮助行为，支持 `d2core help`、`d2core --help`、`d2core -h` 输出完整命令列表，帮助退出0；无参数输出完整用法但仍退出2。`d2core help logs` 或 `d2core logs --help` 查看参数，A2S 用 `d2core a2s enable --help`。RC.1 原包没有顶层help，无参数提示不完整，子命令帮助通常退出2、m0-inspect帮助退出1；不要把旧包帮助退出码误判为启动失败。
+v0.1.1 沿用 RC.2 的帮助行为，支持 `d2core help`、`d2core --help`、`d2core -h` 输出完整命令列表，帮助退出0；无参数输出完整用法但仍退出2。`d2core help logs` 或 `d2core logs --help` 查看参数，A2S 用 `d2core a2s enable --help`。RC.1 原包没有顶层help，无参数提示不完整，子命令帮助通常退出2、m0-inspect帮助退出1；不要把旧包帮助退出码误判为启动失败。
 
 正常管理调用退出0表示请求成功，create/restart/stop 仍需查询 operation；执行错误通常退出1，CLI用法错误通常退出2。m0-inspect 使用独立错误路径，参数/检查失败返回1。
 
@@ -124,9 +124,9 @@ KEY="n6-$(cat /proc/sys/kernel/random/uuid)"
 Windows PowerShell：
 
 ```powershell
-$core = 'D:\d2core-v0.1.0-rc.1-windows-amd64\d2core.exe'
-$dataDir = 'D:\d2core-v0.1.0-rc.1-windows-amd64\dota-data'
-$template = 'D:\d2core-v0.1.0-rc.1-windows-amd64\omgai-n6.json'
+$core = 'D:\d2core-v0.1.1-windows-amd64\d2core.exe'
+$dataDir = 'D:\d2core-v0.1.1-windows-amd64\dota-data'
+$template = 'D:\d2core-v0.1.1-windows-amd64\omgai-n6.json'
 # 窗口 A：保持运行
 & $core serve --data-dir $dataDir --port-min 27000 --port-max 27000 --json
 # 窗口 B：设置上述相同变量后执行
@@ -215,3 +215,9 @@ N-1：升级前经历“已尝试spawn、身份未落盘、子进程已退出”
 portCheck=partial不等于已确认冲突，也不等于检查完全部端口。可确认的TCP监听、主端口UDP及与TCP同号的UDP服务端点参与跨实例冲突检查；独立UDP端点用途、IPv6通配的双栈覆盖无法确定时，在notes中明确保留。确认冲突时status=conflict、room不再ready；核心不自动杀房或换端口。运维需结合notes、模板、实际监听和网络映射验证，不把partial改写为“全部无冲突”。
 
 其他保留边界：模板ready不等于Steam认证完成或客户端可达；历史键受retention期限约束；普通整机重启验收不等于断电验收；不承诺一般性子进程树管理，真实PID复用未自然观察到。Windows Go1.27.1配合现有MinGW8.1验证race时使用 `go test -race -ldflags=-linkmode=external ./... -count=1`；默认链接曾在测试开始前报0xc0000139，不能把该失败解释为数据竞争或跳过race。
+
+## 托管模板与运行观察
+
+标准模板使用 `sv_hibernate_when_empty 0` 和 `dota_quit_after_game 0`，使上层管理端显式掌握实例生命周期；这是可修改的推荐部署策略，不是协议硬要求。结束实例应显式 stop，并确认 reclaimed / stopped / cleanup=complete 后才释放上层 Allocation 与节点容量。进程消失不等于回收完成。
+
+历史真实运行中曾观察到 Dota 未经 d2core stop 自行结束，但本轮 Windows/Ubuntu 受控实验未能通过“所有真人退出”稳定复现，具体触发条件尚未确认。两端约五分钟观察末态仍为 active/running/ready，结论 INCOMPLETE；未验证自然退出后的 stop/reclaim，正常游戏结算触发路径也未独立验证。此观察未复现新的核心缺陷，不阻塞 v0.1.1。

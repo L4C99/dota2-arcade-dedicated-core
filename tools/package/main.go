@@ -45,7 +45,7 @@ func run() error {
 	goTool := flag.String("go", "go", "Go 1.27.1 binary")
 	out := flag.String("output", "dist", "archive output directory")
 	buildStamp := flag.String("build-time", "", "RFC3339 build timestamp; supply the same value for reproducible rebuilds")
-	release := flag.String("version", "0.1.0-dev", "release version without v, e.g. 0.1.0-rc.2")
+	release := flag.String("version", "0.1.1-dev", "release version without v, e.g. 0.1.1")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		return fmt.Errorf("unexpected arguments")
@@ -142,7 +142,7 @@ func run() error {
 		}
 		files["BUILD.json"] = mp
 		name := "d2core-" + commit[:12] + "-" + platform + "-amd64.zip"
-		if *release != "0.1.0-dev" {
+		if *release != "0.1.1-dev" {
 			name = "d2core-v" + *release + "-" + platform + "-amd64.zip"
 		}
 		path := filepath.Join(abs, name)
