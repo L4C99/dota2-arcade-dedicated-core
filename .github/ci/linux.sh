@@ -15,16 +15,17 @@ if [[ "$mode" == prepare ]]; then
   python3 "$GITHUB_WORKSPACE/ci-driver/.github/ci/proc-diagnostic.py"
   uid=$(id -u nobody)
   [[ "$uid" != 0 && "$uid" != "$(id -u)" ]]
-  root=$(mktemp -d "$RUNNER_TEMP/d2core-ci.XXXXXX")
+  root=$(mktemp -d /tmp/d2core-ci.XXXXXX)
   # Existing unprivileged account; change only this per-job temporary directory.
   mkdir "$root/source" "$root/home" "$root/tmp" "$root/cache" "$root/mod"
   cp -a "$GITHUB_WORKSPACE/source/." "$root/source/"
+  cp "$GITHUB_WORKSPACE/ci-driver/.github/ci/proc-diagnostic.py" "$root/proc-diagnostic.py"
   sudo chown -R "$uid:$(id -g nobody)" "$root"
   go_path=$(command -v go)
   printf 'D2_CI_ROOT=%s\nD2_GO=%s\n' "$root" "$go_path" >> "$GITHUB_ENV"
-  sudo -u nobody -- python3 "$GITHUB_WORKSPACE/ci-driver/.github/ci/proc-diagnostic.py"
+  sudo -u nobody -- python3 "$root/proc-diagnostic.py"
   sudo -u nobody -- env HOME="$root/home" GOTOOLCHAIN=local GOCACHE="$root/cache" GOMODCACHE="$root/mod" TMPDIR="$root/tmp" \
-    bash -c 'cd "$1/source"; "$2" mod download && "$2" mod verify && test -z "$(git status --porcelain)"' _ "$root" "$go_path"
+    bash -c 'set -e; cd "$1/source"; "$2" mod download && "$2" mod verify && test -z "$(git status --porcelain)"' _ "$root" "$go_path"
   exit 0
 fi
 case "$mode" in
@@ -37,4 +38,4 @@ esac
 # pipefail propagates every failing check; no continue-on-error or test filtering.
 sudo -u nobody -- env HOME="$D2_CI_ROOT/home" GOTOOLCHAIN=local CGO_ENABLED=1 CC=gcc \
   GOCACHE="$D2_CI_ROOT/cache" GOMODCACHE="$D2_CI_ROOT/mod" TMPDIR="$D2_CI_ROOT/tmp" \
-  bash -c 'cd "$1/source"; shift; exec "$@"' _ "$D2_CI_ROOT" "$D2_GO" "${args[@]}" 2>&1 | tee "$logs/$mode.log"
+  bash -c 'set -e; cd "$1/source"; shift; exec "$@"' _ "$D2_CI_ROOT" "$D2_GO" "${args[@]}" 2>&1 | tee "$logs/$mode.log"
