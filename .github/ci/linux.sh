@@ -33,6 +33,7 @@ case "$mode" in
   vet) args=(vet ./...) ;;
   build) args=(build -o "$D2_CI_ROOT/d2core" ./cmd/d2core) ;;
   race) args=(test -race ./... -count=1) ;;
+  timing) args=(test -race ./internal/core ./internal/engine -run 'Test(TerminalWorkerAllowsRestartBeforeTeardown|RunningWorkerStillRejectsRestart|OpenExitDuringIdentityRead|OpenLiveIdentityFailuresRemainUnverified|M1EarlyExitRetainsDiagnosticAndReservation|ReliabilityStopQueuedRestartNoNewGeneration)$' -count=20) ;;
   *) echo "unknown check: $mode" >&2; exit 2 ;;
 esac
 # pipefail propagates every failing check; no continue-on-error or test filtering.

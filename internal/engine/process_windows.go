@@ -99,6 +99,10 @@ func startWithIdentity(spec Spec, openProcess func(uint32, bool, uint32) (syscal
 }
 
 func Open(id Identity) (*Handle, error) {
+	return openWithIdentity(id, nativeIdentity)
+}
+
+func openWithIdentity(id Identity, readID func(syscall.Handle, int) (Identity, error)) (*Handle, error) {
 	if id.PID <= 0 || id.CreationTime == 0 || !filepath.IsAbs(id.Executable) {
 		return nil, ErrIdentity
 	}
@@ -118,8 +122,19 @@ func Open(id Identity) (*Handle, error) {
 		}
 		return nil, ErrGone
 	}
-	actual, err := nativeIdentity(h, id.PID)
-	if err != nil || actual.CreationTime != id.CreationTime || !strings.EqualFold(filepath.Clean(actual.Executable), filepath.Clean(id.Executable)) {
+	actual, err := readID(h, id.PID)
+	if err != nil {
+		// Exit can occur after the first wait and before the image query.
+		// Only a signaled handle proves exit; access/query errors for a live
+		// process remain unverified. Never reopen by PID at this boundary.
+		alive, waitErr := result.Alive()
+		result.Close()
+		if waitErr == nil && !alive {
+			return nil, ErrGone
+		}
+		return nil, ErrIdentity
+	}
+	if actual.CreationTime != id.CreationTime || !strings.EqualFold(filepath.Clean(actual.Executable), filepath.Clean(id.Executable)) {
 		result.Close()
 		return nil, ErrIdentity
 	}

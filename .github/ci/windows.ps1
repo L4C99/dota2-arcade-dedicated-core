@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][ValidateSet('prepare','test','vet','build','race')][string]$Mode)
+param([Parameter(Mandatory=$true)][ValidateSet('prepare','test','vet','build','race','timing')][string]$Mode)
 # CI only. Hosted tools only; no game installation or system configuration changes.
 $ErrorActionPreference='Stop'
 $logs=Join-Path $env:RUNNER_TEMP 'd2core-ci-logs'
@@ -27,6 +27,7 @@ switch($Mode){
     vet { $checkArgs=@('vet','./...') }
     build { $checkArgs=@('build','-o',(Join-Path $env:RUNNER_TEMP 'd2core-ci-work/d2core.exe'),'./cmd/d2core') }
     race { $checkArgs=@('test','-race','-ldflags=-linkmode=external','./...','-count=1') }
+    timing { $checkArgs=@('test','-race','-ldflags=-linkmode=external','./internal/core','./internal/engine','-run','Test(TerminalWorkerAllowsRestartBeforeTeardown|RunningWorkerStillRejectsRestart|OpenExitDuringIdentityRead|OpenLiveIdentityFailuresRemainUnverified|M1EarlyExitRetainsDiagnosticAndReservation|ReliabilityStopQueuedRestartNoNewGeneration)$','-count=20') }
 }
 & $env:D2_GO @checkArgs 2>&1 | Tee-Object -FilePath "$logs/$Mode.log"
 exit $LASTEXITCODE

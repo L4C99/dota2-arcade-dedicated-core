@@ -590,8 +590,14 @@ func (m *Manager) change(in *records.Instance, kind string) (any, *records.Failu
 			return nil, fail("RECLAIMED", "validate", "historical instance cannot restart")
 		}
 		if old != nil {
-			return nil, fail("BUSY", "validate", "instance operation is running")
+			operation := m.store.State.Operations[old.operationID]
+			if operation == nil || operation.Status == "running" {
+				return nil, fail("BUSY", "validate", "instance operation is running")
+			}
 		}
+		// A terminal operation is externally complete even if its deferred
+		// worker teardown has not run. Keep old as the predecessor below:
+		// stopOrRestart waits for old.done before any process control/spawn.
 		if in.Lifecycle != "active" || in.Process != "running" {
 			return nil, fail("INVALID_STATE", "validate", "restart requires a running active instance")
 		}

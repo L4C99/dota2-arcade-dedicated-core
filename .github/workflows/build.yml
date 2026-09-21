@@ -18,7 +18,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-2025, ubuntu-24.04]
-        source: [current, v0.1.0]
+        # The frozen v0.1.0 audit is retained in ci-health.md. Do not keep
+        # rerunning that known-defective historical source after fixing main.
+        source: [current]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout CI driver
@@ -29,8 +31,7 @@ jobs:
       - name: Checkout tested source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          # Test the immutable original release source using this CI driver.
-          ref: ${{ matrix.source == 'v0.1.0' && 'cf986dc49762621a681735a6a13f1941f577f43d' || github.sha }}
+          ref: ${{ github.sha }}
           path: source
           persist-credentials: false
       - name: Setup fixed Go
@@ -81,6 +82,14 @@ jobs:
         if: ${{ !cancelled() && steps.windows.outcome == 'success' }}
         shell: pwsh
         run: ./ci-driver/.github/ci/windows.ps1 race
+      - name: Linux timing regressions (20 race repetitions)
+        if: ${{ !cancelled() && steps.linux.outcome == 'success' }}
+        shell: bash
+        run: bash ci-driver/.github/ci/linux.sh timing
+      - name: Windows timing regressions (20 race repetitions)
+        if: ${{ !cancelled() && steps.windows.outcome == 'success' }}
+        shell: pwsh
+        run: ./ci-driver/.github/ci/windows.ps1 timing
       - name: Preserve check logs
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
