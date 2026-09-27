@@ -8,6 +8,8 @@ Dota 2 Arcade Dedicated Server lifecycle manager for Windows and Linux.
 
 当前稳定版本：[v0.1.1](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.1)。当前仓库源码及文档采用 [MIT License](LICENSE)，公开供社区研究、使用、fork 和二次开发。
 
+历史版本的授权适用范围见 [LICENSING.md](LICENSING.md)。
+
 ## 维护状态与项目关系
 
 本项目主要源于作者实际 Dota 2 Arcade Dedicated Server 部署需求，并公开作为社区研究和参考资料。维护以作者实际需求和空闲时间为准，不承诺持续开发、功能请求实现或技术支持；Issues 按 best-effort 处理。

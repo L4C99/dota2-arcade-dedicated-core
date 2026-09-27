@@ -8,7 +8,7 @@ Windows/Linux amd64 ZIP 采用明确白名单，仅包含：
 
 - d2core（Windows 为 .exe）、launcher-example、BUILD.json。
 - README.md、RELEASE_NOTES.md。
-- LICENSE：本次仓库整理后构建的未来 Release 纳入白名单；已发布 v0.1.1 原包保持不变，不追补或覆盖资产。
+- LICENSE、LICENSING.md：未来新构建 Release 纳入白名单。历史 v0.1.1 不重新打包、不覆盖、不重发；授权范围由当前 LICENSE 与 LICENSING.md 澄清。
 - docs/delivery.md、operations.md、local-api.md、a2s.md。
 - examples/README.md、两平台模板、examples/launcher/README.md 与 main.go（外部调用示例源码）。
 

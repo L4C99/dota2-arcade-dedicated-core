@@ -56,6 +56,13 @@ func TestRuntimeDistribution(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer z.Close()
+	for _, required := range []string{"LICENSE", "LICENSING.md"} {
+		if file, err := z.Open(required); err != nil {
+			t.Errorf("missing required licensing file %s: %v", required, err)
+		} else {
+			file.Close()
+		}
+	}
 	if len(z.File) != len(releaseFiles) {
 		t.Fatal("unexpected archive entries")
 	}
