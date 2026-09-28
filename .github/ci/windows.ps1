@@ -27,10 +27,11 @@ if($Mode -eq 'package') {
     if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
     python tools/package/verify_test.py 2>&1 | Tee-Object -FilePath "$logs/package.log" -Append
     if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+    $version=(Get-Content -Raw tools/package/VERSION).Trim()
     $output=Join-Path $env:RUNNER_TEMP 'd2core-package'
-    & $env:D2_GO run ./tools/package --go $env:D2_GO --version 0.1.2-rc.1 --output $output 2>&1 | Tee-Object -FilePath "$logs/package.log" -Append
+    & $env:D2_GO run ./tools/package --go $env:D2_GO --version $version --output $output 2>&1 | Tee-Object -FilePath "$logs/package.log" -Append
     if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
-    python tools/package/verify.py $output --commit (git rev-parse HEAD) --version 0.1.2-rc.1 --native 2>&1 | Tee-Object -FilePath "$logs/package-verification.json"
+    python tools/package/verify.py $output --commit (git rev-parse HEAD) --version $version --native --write-manifest 2>&1 | Tee-Object -FilePath "$logs/package-verification.json"
     exit $LASTEXITCODE
 }
 switch($Mode){

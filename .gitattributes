@@ -1,0 +1,10 @@
+# Release source bytes must have deterministic checkout semantics.
+* text=auto eol=lf
+*.zip binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.exe binary
+*.dll binary
+*.so binary
+*.vpk binary

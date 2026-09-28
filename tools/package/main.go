@@ -5,6 +5,7 @@ package main
 import (
 	"archive/zip"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -27,6 +28,9 @@ var releaseFiles = []string{
 	"examples/launcher/README.md", "examples/launcher/main.go",
 }
 
+//go:embed VERSION
+var releaseVersion string
+
 func main() {
 	if e := run(); e != nil {
 		fmt.Fprintln(os.Stderr, e)
@@ -44,14 +48,17 @@ func command(name string, args ...string) (string, error) {
 func run() error {
 	goTool := flag.String("go", "go", "Go 1.27.1 binary")
 	out := flag.String("output", "dist", "archive output directory")
-	buildStamp := flag.String("build-time", "", "RFC3339 build timestamp; supply the same value for reproducible rebuilds")
-	release := flag.String("version", "0.1.2-dev", "release version without v, e.g. 0.1.2-rc.1")
+	buildStamp := flag.String("build-time", "", "RFC3339 timestamp; reproducibility also requires exact Git blobs and the pinned build environment")
+	release := flag.String("version", strings.TrimSpace(releaseVersion), "must match tools/package/VERSION")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		return fmt.Errorf("unexpected arguments")
 	}
 	if !regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-dev|-rc\.[1-9][0-9]*)?$`).MatchString(*release) {
 		return fmt.Errorf("version must be X.Y.Z, X.Y.Z-dev or X.Y.Z-rc.N")
+	}
+	if *release != strings.TrimSpace(releaseVersion) {
+		return fmt.Errorf("version must match tools/package/VERSION (%s)", strings.TrimSpace(releaseVersion))
 	}
 	root, e := command("git", "rev-parse", "--show-toplevel")
 	if e != nil {
@@ -73,6 +80,9 @@ func run() error {
 	}
 	commit, e := command("git", "rev-parse", "HEAD")
 	if e != nil {
+		return e
+	}
+	if e := verifyTrackedInputs(root, commit); e != nil {
 		return e
 	}
 	stamp, e := command("git", "show", "-s", "--format=%cI", "HEAD")
@@ -131,8 +141,8 @@ func run() error {
 		}
 		for _, target := range []struct{ name, pkg string }{{"d2core", "./cmd/d2core"}, {"launcher-example", "./examples/launcher"}} {
 			path := filepath.Join(stage, platform+"-"+target.name+suffix)
-			c := exec.Command(*goTool, "build", "-trimpath", "-buildvcs=true", "-ldflags=-X main.buildTime="+builtAt.Format(time.RFC3339)+" -X main.releaseVersion="+*release, "-o", path, target.pkg)
-			c.Env = append(os.Environ(), "GOOS="+platform, "GOARCH=amd64", "CGO_ENABLED=0", "GOTOOLCHAIN=local")
+			c := exec.Command(*goTool, "build", "-mod=readonly", "-trimpath", "-buildvcs=true", "-ldflags=-X main.buildTime="+builtAt.Format(time.RFC3339)+" -X main.releaseVersion="+*release, "-o", path, target.pkg)
+			c.Env = append(os.Environ(), "GOOS="+platform, "GOARCH=amd64", "GOAMD64=v1", "CGO_ENABLED=0", "GOTOOLCHAIN=local", "GOFLAGS=", "GOEXPERIMENT=", "GOWORK=off", "GOENV=off")
 			if b, e := c.CombinedOutput(); e != nil {
 				return fmt.Errorf("build %s/%s: %w %s", platform, target.name, e, b)
 			}
@@ -144,12 +154,15 @@ func run() error {
 			return e
 		}
 		files["BUILD.json"] = mp
-		name := "d2core-" + commit[:12] + "-" + platform + "-amd64.zip"
-		if *release != "0.1.2-dev" {
-			name = "d2core-v" + *release + "-" + platform + "-amd64.zip"
-		}
+		name := "d2core-v" + *release + "-" + platform + "-amd64.zip"
 		path := filepath.Join(abs, name)
 		if e = archive(path, files, builtAt); e != nil {
+			return e
+		}
+		if e := verifyTrackedInputs(root, commit); e != nil {
+			return e
+		}
+		if e := verifyArchiveSources(path, root, commit); e != nil {
 			return e
 		}
 		f, e := os.Open(path)

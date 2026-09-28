@@ -1,6 +1,14 @@
 # v0.1.2 Release Hardening — candidate
 
-Status: **unreleased**, candidate version `0.1.2-rc.1`. Current stable remains **v0.1.1**, commit `988720ad85af1f0d97bfe98ec4da4fcbb070beea`. No v0.1.2 tag or GitHub Release is created at this gate.
+Status: **unreleased**, candidate version `0.1.2-rc.2`. Current stable remains **v0.1.1**, commit `988720ad85af1f0d97bfe98ec4da4fcbb070beea`. No v0.1.2 tag or GitHub Release is created at this gate.
+
+## RC2 review remediation
+
+- Deterministic LF checkout and fail-closed tracked-input / Git-blob provenance checks.
+- Static ZIP entries checked byte-for-byte against the fixed candidate commit.
+- Machine-generated and checked manifest/checksums; optional externally supplied SHA256 anchors.
+- A single candidate VERSION input for builder, verifier and both CI scripts; contract drift regression tests.
+- Version-neutral operations paths. Historical RC1 remains traceable; no Runtime changes.
 
 ## Runtime
 

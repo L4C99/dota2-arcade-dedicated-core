@@ -2,8 +2,9 @@
 
 本文区分未发布候选与正式 Runtime Release。main 发布后的文档、授权澄清和维护提交不构成新版本，也不自动替代生产集成固定的 tag/commit。
 
-## v0.1.2（未发布；0.1.2-rc.1 candidate）
+## v0.1.2（未发布；0.1.2-rc.2 candidate）
 
+- RC2：固定 LF checkout，构建输入/ZIP 静态内容逐字节核对 Git blobs；机器生成并核验 Manifest，统一候选版本入口。
 - Release artifact completeness：自包含文档、配置示例与构建身份校验。
 - 纳入 MIT 授权、历史授权范围及实际依赖许可证/声明材料。
 - 强化公网模板的精确 Steam readiness 必需规则及 Ready 边界说明。

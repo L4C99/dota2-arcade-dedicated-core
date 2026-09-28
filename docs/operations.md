@@ -134,9 +134,9 @@ KEY="n6-$(cat /proc/sys/kernel/random/uuid)"
 Windows PowerShell：
 
 ```powershell
-$core = 'D:\d2core-v0.1.1-windows-amd64\d2core.exe'
-$dataDir = 'D:\d2core-v0.1.1-windows-amd64\dota-data'
-$template = 'D:\d2core-v0.1.1-windows-amd64\omgai-n6.json'
+$core = 'D:\d2core\d2core.exe'
+$dataDir = 'D:\d2core\dota-data'
+$template = 'D:\d2core\omgai-n6.json'
 # 窗口 A：保持运行
 & $core serve --data-dir $dataDir --port-min 27000 --port-max 27000 --json
 # 窗口 B：设置上述相同变量后执行

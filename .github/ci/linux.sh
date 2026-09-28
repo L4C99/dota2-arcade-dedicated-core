@@ -30,7 +30,7 @@ if [[ "$mode" == prepare ]]; then
 fi
 if [[ "$mode" == package ]]; then
   sudo -u nobody -- env HOME="$D2_CI_ROOT/home" XDG_CONFIG_HOME="$D2_CI_ROOT/home/.config" GOTOOLCHAIN=local GOCACHE="$D2_CI_ROOT/cache" GOMODCACHE="$D2_CI_ROOT/mod" TMPDIR="$D2_CI_ROOT/tmp" \
-    bash -c 'set -euo pipefail; cd "$1/source"; "$2" test ./tools/package -count=1; python3 tools/package/verify_test.py; "$2" run ./tools/package --go "$2" --version 0.1.2-rc.1 --output "$1/package"; python3 tools/package/verify.py "$1/package" --commit "$(git rev-parse HEAD)" --version 0.1.2-rc.1 --native' _ "$D2_CI_ROOT" "$D2_GO" 2>&1 | tee "$logs/package.log"
+    bash -c 'set -euo pipefail; cd "$1/source"; "$2" test ./tools/package -count=1; python3 tools/package/verify_test.py; version=$(cat tools/package/VERSION); "$2" run ./tools/package --go "$2" --version "$version" --output "$1/package"; python3 tools/package/verify.py "$1/package" --commit "$(git rev-parse HEAD)" --version "$version" --native --write-manifest' _ "$D2_CI_ROOT" "$D2_GO" 2>&1 | tee "$logs/package.log"
   exit 0
 fi
 case "$mode" in
