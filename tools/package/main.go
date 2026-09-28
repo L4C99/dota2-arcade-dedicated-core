@@ -69,7 +69,7 @@ func run() error {
 		return e
 	}
 	if status != "" {
-		return fmt.Errorf("refusing package from dirty checkout")
+		return fmt.Errorf("refusing package from dirty checkout:\n%s", status)
 	}
 	commit, e := command("git", "rev-parse", "HEAD")
 	if e != nil {
