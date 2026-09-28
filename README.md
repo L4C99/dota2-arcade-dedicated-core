@@ -6,13 +6,13 @@ Dota 2 Arcade Dedicated Server lifecycle manager for Windows and Linux.
 
 它不是游廊平台、匹配服务、远程控制面板或游戏资源下载器；不会分发地图、配置 NAT、防火墙或自动升级游戏。
 
-当前稳定版本：[v0.1.1](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.1)。当前仓库源码及文档采用 [MIT License](LICENSE)，公开供社区研究、使用、fork 和二次开发。
+当前稳定版本：[v0.1.2](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.2)。当前仓库源码及文档采用 [MIT License](LICENSE)，公开供社区研究、使用、fork 和二次开发。
 
 历史版本的授权适用范围见 [LICENSING.md](LICENSING.md)；二进制依赖的再分发材料见 [第三方声明](THIRD_PARTY_NOTICES.md)。
 
 ## 版本与分支
 
-正式稳定 Runtime 为 **v0.1.1**，固定源码提交 `988720ad85af1f0d97bfe98ec4da4fcbb070beea`；`protocolVersion=1`、模板 `schemaVersion=1`、磁盘 `formatVersion=2`。
+正式稳定版本为 **v0.1.2**，固定源码为 `v0.1.2` tag 解引用的 publication commit（`v0.1.2^{commit}`），完整 SHA 须与随包 BUILD.json.gitCommit 和发布记录一致；`protocolVersion=1`、模板 `schemaVersion=1`、磁盘 `formatVersion=2`。
 
 `main` 是发布后的维护/开发线（post-release maintenance/development line）。后续文档与授权说明不改变 v0.1.1 的 runtime/protocol 基线；从 main 构建的开发版本不会自动成为已验证的 Runtime Release。生产集成应固定正式 tag/commit 与 Release 资产，不追踪 main。Platform 等集成方升级 Core 须另行授权，完成兼容性和真实环境验收后使用新的正式 Release。
 
@@ -22,7 +22,7 @@ Dota 2 Arcade Dedicated Server lifecycle manager for Windows and Linux.
 
 这是独立社区项目，与 Valve Corporation 无隶属或官方认可关系。Dota 2、Steam 及相关商标归各自权利人所有。仓库及 Release 不包含 Dota 2、Steam、Workshop VPK 或其他游戏资产。
 
-## v0.1.1 能做什么
+## 核心能力
 
 - 创建、查询、重启、停止并显式回收实例；保留操作结果和历史日志。
 - 自动分配指定范围内的游戏端口，也可显式指定端口；支持多个实例。
@@ -38,7 +38,7 @@ Dota 2 Arcade Dedicated Server lifecycle manager for Windows and Linux.
 
 ## 下载与快速开始
 
-普通用户优先从 [GitHub Releases](https://github.com/L4C99/dota2-arcade-dedicated-core/releases) 下载对应平台二进制。v0.1.1 正式资产以该页面及校验清单为准；不要把 RC 包改名当作正式版。当前稳定版仍为 v0.1.1；本分支正在完成 v0.1.2 Release Hardening 正式发布准备，产物版本为 0.1.2，尚未创建 tag 或 Release。最终产物核验和发布门槛见[交付说明](docs/delivery.md)与[Release Notes](RELEASE_NOTES.md)。
+普通用户优先从 [GitHub Releases](https://github.com/L4C99/dota2-arcade-dedicated-core/releases) 下载对应平台二进制。v0.1.2 的正式发布身份由 v0.1.2 tag、对应源码提交、Release 资产、BUILD.json 与公布的 SHA256 共同确定；不要把 RC 包改名当作正式版。产物核验和发布门槛见[交付说明](docs/delivery.md)与[Release Notes](RELEASE_NOTES.md)。
 
 1. 校验 ZIP 的 SHA256，解压到全新可写 ASCII 路径；Linux 确认 `d2core` 和 `launcher-example` 有执行权限。
 2. 运行 `d2core version --json`，核对版本、提交、构建时间与 `BUILD.json`，`gitDirty` 应为 false。
@@ -122,7 +122,7 @@ check 只做静态检查。创建时保存配置快照，编辑原模板不会�
 
 | 文档 | 内容 |
 | --- | --- |
-| [Release Notes](RELEASE_NOTES.md) | v0.1.2 内容与正式发布准备状态 |
+| [Release Notes](RELEASE_NOTES.md) | v0.1.2 发布内容与兼容边界 |
 | [交付说明](docs/delivery.md) | 包内容、校验、正式发布验收 |
 | [操作说明](docs/operations.md) | 完整 CLI、端口、恢复、升级与失败回收 |
 | [模板说明](examples/README.md) | Windows/Linux 模板和资源布局 |

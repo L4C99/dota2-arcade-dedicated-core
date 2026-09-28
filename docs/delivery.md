@@ -1,6 +1,6 @@
 # v0.1.2 交付说明
 
-本轮处于 v0.1.2 正式发布准备，产物版本为 `0.1.2`，尚未创建 tag 或 GitHub Release；当前稳定 Runtime 仍为 v0.1.1。现有正式资产与最终检查记录以 [v0.1.1 Release](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.1) 为准，annotated tag 解引用固定为 `988720ad85af1f0d97bfe98ec4da4fcbb070beea`。普通用户使用该 Release 二进制；main 最新源码或 RC 包不能冒充原正式资产。
+本说明对应 v0.1.2 正式 Release，产物版本为 `0.1.2`。正式身份由 `v0.1.2` tag 解引用的 publication commit、[Release 资产](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.2)、BUILD.json 与公布的 SHA256 共同确定。完整源码 SHA 必须相互一致；main 最新源码或 RC 包不能冒充固定正式资产。
 
 核验正式身份时交叉检查 tag/commit、随包 BUILD.json、`d2core version --json` 和 Release SHA256 清单。main 后续文档、授权与白名单维护不追溯改变现有包内容。
 
@@ -50,11 +50,11 @@ python tools/package/verify.py ABS_OUTPUT --commit FULL_FINAL_SHA --version 0.1.
 
 BUILD.json 包含 version、gitCommit、gitDirty=false、构建/源码时间、Go 版本、os/arch 与兼容版本。最终源码 SHA 以实际构建记录为准，不预写 tag。公网模板必须同时满足地图/脚本与精确 Steam 规则，具体见[模板说明](../examples/README.md)。
 
-打包门槛失败时不发布。通过仅表示 final candidate ready for Final Release Gate；本轮不创建 tag/Release，不更新 v0.1.1 资产。批准正式发布后，才更新 stable 表述及正式发布身份。
+打包门槛失败时不发布。发布必须使用通过验收的固定源码与对应产物；版本号本身不代表验收通过。不得重建后覆盖 v0.1.1 历史资产。
 
 ## 字节来源与可重复构建
 
-发布版本的唯一机器配置入口为源码仓库 `tools/package/VERSION`（当前 `0.1.2`）；builder 默认读取它，显式 --version 不一致则拒绝。双平台 CI 从同一文件读取，验证器也从指定 commit 的 Git blob 核对版本。当前 stable 仍为 v0.1.1，v0.1.2 尚未发布。
+发布版本的唯一机器配置入口为源码仓库 `tools/package/VERSION`（当前 `0.1.2`）；builder 默认读取它，显式 --version 不一致则拒绝。双平台 CI 从同一文件读取，验证器也从指定 commit 的 Git blob 核对版本。当前稳定版本为 v0.1.2；正式身份仍须与固定 tag 和公布摘要交叉核验。
 
 `.gitattributes` 为受控文本固定 LF checkout。打包前核对**整个 tracked tree** 的原始文件字节与 HEAD blobs；这覆盖两个 Go 编译目标、构建元数据及全部静态分发输入。即使 git status clean，CRLF 转写、过滤器改写或缺失文件仍会失败。工具不会悄悄规范化；请从固定提交重新建立独立 clean checkout，避免与编辑器/其他构建并发修改。旧 clone 可能保留历史 CRLF 字节，即使 Git 显示 clean 也会被正确拒绝；此时优先在新目录 fresh clone 并 checkout 固定完整 SHA，保留旧目录中的工作，不绕过 gate 或静默 normalize。打包后再次核对 tracked 输入，并检查所有静态 ZIP entry 与固定 commit blob 完全相等。
 

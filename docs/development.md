@@ -4,7 +4,7 @@
 
 ## main 与稳定 Runtime
 
-当前稳定 Runtime 为 v0.1.1 / `988720ad85af1f0d97bfe98ec4da4fcbb070beea`；Platform 当前固定依赖此 tag/commit，protocolVersion=1、模板 schemaVersion=1、磁盘 formatVersion=2。
+当前稳定版本为 v0.1.2，源码身份以 `v0.1.2^{commit}` 与 BUILD.json.gitCommit、发布记录交叉核验；Platform 等集成方的既有版本固定不因 Core 发布自动升级，protocolVersion=1、模板 schemaVersion=1、磁盘 formatVersion=2。
 
 main 在发布后继续承载文档、授权澄清及未来开发，不等于当前稳定 Runtime Release。生产集成应固定正式 tag/commit；维护者或 Agent 不得把 main 新提交自动当作升级依据。Core 升级须经独立授权、新的正式 Release、兼容性检查和真实环境验收，本轮文档维护不改变既有依赖。未来版本方向与版本号由 Owner 另行决定，不承诺下一版本或发布日期。
 
@@ -36,7 +36,7 @@ GitHub hosted CI 配置、历史失败分类与实际运行结果见 [CI 健康�
 go run ./tools/package --go ABS_GO --output ABS_NEW_OUTPUT --version X.Y.Z --build-time RFC3339_UTC
 ```
 
-`X.Y.Z` 替换为本次拟发布版本（当前稳定版本为 v0.1.1）；维护新包不应重建或覆盖既有 Release。
+`X.Y.Z` 替换为本次拟发布版本（当前稳定版本为 v0.1.2）；维护新包不应重建或覆盖既有 Release。
 
 工具固定 amd64、CGO_ENABLED=0、trimpath 与文件白名单，拒绝脏工作树和覆盖已有输出。不指定版本生成开发包。相同提交/工具链/时间用于复现；不要将开发目录旧二进制带入归档。
 
