@@ -24,12 +24,12 @@ if [[ "$mode" == prepare ]]; then
   go_path=$(command -v go)
   printf 'D2_CI_ROOT=%s\nD2_GO=%s\n' "$root" "$go_path" >> "$GITHUB_ENV"
   sudo -u nobody -- python3 "$root/proc-diagnostic.py"
-  sudo -u nobody -- env HOME="$root/home" GOTOOLCHAIN=local GOCACHE="$root/cache" GOMODCACHE="$root/mod" TMPDIR="$root/tmp" \
+  sudo -u nobody -- env HOME="$root/home" XDG_CONFIG_HOME="$root/home/.config" GOTOOLCHAIN=local GOCACHE="$root/cache" GOMODCACHE="$root/mod" TMPDIR="$root/tmp" \
     bash -c 'set -e; cd "$1/source"; "$2" mod download && "$2" mod verify && test -z "$(git status --porcelain)"' _ "$root" "$go_path"
   exit 0
 fi
 if [[ "$mode" == package ]]; then
-  sudo -u nobody -- env HOME="$D2_CI_ROOT/home" GOTOOLCHAIN=local GOCACHE="$D2_CI_ROOT/cache" GOMODCACHE="$D2_CI_ROOT/mod" TMPDIR="$D2_CI_ROOT/tmp" \
+  sudo -u nobody -- env HOME="$D2_CI_ROOT/home" XDG_CONFIG_HOME="$D2_CI_ROOT/home/.config" GOTOOLCHAIN=local GOCACHE="$D2_CI_ROOT/cache" GOMODCACHE="$D2_CI_ROOT/mod" TMPDIR="$D2_CI_ROOT/tmp" \
     bash -c 'set -euo pipefail; cd "$1/source"; "$2" test ./tools/package -count=1; python3 tools/package/verify_test.py; "$2" run ./tools/package --go "$2" --version 0.1.2-rc.1 --output "$1/package"; python3 tools/package/verify.py "$1/package" --commit "$(git rev-parse HEAD)" --version 0.1.2-rc.1 --native' _ "$D2_CI_ROOT" "$D2_GO" 2>&1 | tee "$logs/package.log"
   exit 0
 fi
@@ -42,6 +42,6 @@ case "$mode" in
   *) echo "unknown check: $mode" >&2; exit 2 ;;
 esac
 # pipefail propagates every failing check; no continue-on-error or test filtering.
-sudo -u nobody -- env HOME="$D2_CI_ROOT/home" GOTOOLCHAIN=local CGO_ENABLED=1 CC=gcc \
+sudo -u nobody -- env HOME="$D2_CI_ROOT/home" XDG_CONFIG_HOME="$D2_CI_ROOT/home/.config" GOTOOLCHAIN=local CGO_ENABLED=1 CC=gcc \
   GOCACHE="$D2_CI_ROOT/cache" GOMODCACHE="$D2_CI_ROOT/mod" TMPDIR="$D2_CI_ROOT/tmp" \
   bash -c 'set -e; cd "$1/source"; shift; exec "$@"' _ "$D2_CI_ROOT" "$D2_GO" "${args[@]}" 2>&1 | tee "$logs/$mode.log"
