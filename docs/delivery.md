@@ -1,6 +1,6 @@
 # v0.1.2 交付说明
 
-本说明对应 v0.1.2 正式 Release，产物版本为 `0.1.2`。正式身份由 `v0.1.2` tag 解引用的 publication commit、[Release 资产](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.2)、BUILD.json 与公布的 SHA256 共同确定。完整源码 SHA 必须相互一致；main 最新源码或 RC 包不能冒充固定正式资产。
+本说明对应 v0.1.2 正式 Release，产物版本为 `0.1.2`。正式身份由 `v0.1.2` tag 解引用的发布提交、[Release 资产](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.2)、BUILD.json 与公布的 SHA256 共同确定。完整源码 SHA 必须相互一致；main 最新源码或 RC 包不能冒充固定正式资产。
 
 核验正式身份时交叉检查 tag/commit、随包 BUILD.json、`d2core version --json` 和 Release SHA256 清单。main 后续文档、授权与白名单维护不追溯改变现有包内容。
 
@@ -31,7 +31,7 @@ check、编译成功及 ready 均不能单独代表玩家可进入房间。失�
 
 ## 发布与升级门槛
 
-v0.1.1 已正式发布，不从后续 main 重建、改名或覆盖原资产。未来 Runtime 版本须独立授权并使用新的 version/tag/Release；从已验收的远端固定完整提交建立干净 checkout，固定工具链，按本次授权版本构建。不复用开发产物，不覆盖历史 tag 或包。提交与 SHA256 按实际新产物填写到该版本发布记录，不预写虚构值。
+已发布的 v0.1.2 及历史版本均不从后续 main 重建、改名或覆盖原资产。未来 Runtime 版本须独立授权并使用新的 version/tag/Release；从已验收的远端固定完整提交建立干净 checkout，固定工具链，按本次授权版本构建。不复用开发产物，不覆盖历史 tag 或包。提交与 SHA256 按实际新产物填写到该版本发布记录，不预写虚构值。
 
 发布前检查包白名单、文档链接、version/BUILD.json、双平台运行及校验清单。原 RC 烟测证据只说明候选结果；正式包验证另记。详细维护流程在源码仓库 docs/development.md，开发工具不随运行包分发。
 
@@ -50,7 +50,7 @@ python tools/package/verify.py ABS_OUTPUT --commit FULL_FINAL_SHA --version 0.1.
 
 BUILD.json 包含 version、gitCommit、gitDirty=false、构建/源码时间、Go 版本、os/arch 与兼容版本。最终源码 SHA 以实际构建记录为准，不预写 tag。公网模板必须同时满足地图/脚本与精确 Steam 规则，具体见[模板说明](../examples/README.md)。
 
-打包门槛失败时不发布。发布必须使用通过验收的固定源码与对应产物；版本号本身不代表验收通过。不得重建后覆盖 v0.1.1 历史资产。
+打包门槛失败时不发布。发布必须使用通过验收的固定源码与对应产物；版本号本身不代表验收通过。不得重建后覆盖 v0.1.2 或更早版本的历史资产。
 
 ## 字节来源与可重复构建
 
@@ -62,6 +62,6 @@ BUILD.json 包含 version、gitCommit、gitDirty=false、构建/源码时间、G
 
 验证器需要包含候选 Git objects 的本地源码仓库；可用 `--repo ABS_REPOSITORY` 指定，不要求该仓库的 worktree 字节用于核验。`--write-manifest` 仅在检查通过后以独占创建方式生成 RELEASE-MANIFEST.json 与 SHA256SUMS，字段来自实际 ZIP。后续省略该选项会重新检查已有 Manifest 的 version/commit/buildTime、文件名/长度/摘要/entry list 和 BUILD 身份；不允许手工漂移。
 
-每个 .zip.sha256 sidecar 是同次产物的 **self-consistency** 检查，不是独立真实性证明。外部身份锚点是 Owner 或可信 GitHub Release 渠道公布的 SHA256；独立审查时可重复传入 `--expected-sha256 文件名=64位小写摘要`，须提供两个 ZIP 的已知摘要。不要从待检 ZIP 重新计算“预期值”再声称验证了外部身份。无需新增签名设施。
+每个 .zip.sha256 sidecar 是同次产物的 **自身一致性** 检查，不是独立真实性证明。外部身份锚点是 Owner 或可信 GitHub Release 渠道公布的 SHA256；独立审查时可重复传入 `--expected-sha256 文件名=64位小写摘要`，须提供两个 ZIP 的已知摘要。不要从待检 ZIP 重新计算“预期值”再声称验证了外部身份。无需新增签名设施。
 
 本版本随交付记录保留实际 buildTime、完整 SHA、两次独立构建比较结果和机器生成的 Manifest。源码来源检查不等于第三方模块或编译器供应链的密码学证明，也不声称本轮重新进行了真实 Dota 验收。

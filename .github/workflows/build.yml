@@ -40,6 +40,13 @@ jobs:
           go-version-file: source/go.mod
           check-latest: false
           cache: false # Cold-cache health checks, no old test result reuse.
+      - name: Documentation language and release-state consistency
+        if: runner.os == 'Linux'
+        working-directory: source
+        shell: bash
+        run: |
+          python3 tools/check_docs_test.py
+          python3 tools/check_docs.py
       - name: Prepare isolated Linux checks
         if: runner.os == 'Linux'
         id: linux

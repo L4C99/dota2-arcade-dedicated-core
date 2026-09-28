@@ -6,9 +6,9 @@
 
 当前稳定版本为 v0.1.2，源码身份以 `v0.1.2^{commit}` 与 BUILD.json.gitCommit、发布记录交叉核验；Platform 等集成方的既有版本固定不因 Core 发布自动升级，protocolVersion=1、模板 schemaVersion=1、磁盘 formatVersion=2。
 
-main 在发布后继续承载文档、授权澄清及未来开发，不等于当前稳定 Runtime Release。生产集成应固定正式 tag/commit；维护者或 Agent 不得把 main 新提交自动当作升级依据。Core 升级须经独立授权、新的正式 Release、兼容性检查和真实环境验收，本轮文档维护不改变既有依赖。未来版本方向与版本号由 Owner 另行决定，不承诺下一版本或发布日期。
+main 在发布后继续承载文档、授权澄清及未来开发，不等于当前稳定运行版本。生产集成应固定正式 tag/commit；维护者或 Agent 不得把 main 新提交自动当作升级依据。Core 升级须经独立授权、新的正式 Release、兼容性检查和真实环境验收，本轮文档维护不改变既有依赖。未来版本方向与版本号由 Owner 另行决定，不承诺下一版本或发布日期。
 
-正式版本摘要见 [Changelog](../CHANGELOG.md)，历史发布事实见相应 tag/Release。
+正式版本摘要见 [版本变更记录](../CHANGELOG.md)，历史发布事实见相应 tag/Release。
 
 ## 仓库布局
 
@@ -21,6 +21,10 @@ main 在发布后继续承载文档、授权澄清及未来开发，不等于当
 - local、dist、data、build：忽略的本地产物，不提交。根目录私人任务计划、VPK 同样忽略。
 
 不要提交密钥、个人目录配置、一次性脚本、原始玩家日志、抓包、进程转储或本机诊断输出。长期结论需脱敏写成验证文档；原始证据保留在本地隔离目录。不要因文件处于忽略目录就将它作为公开交付内容。
+
+## 文档维护
+
+维护者及 Agent 修改文档须遵守[文档语言与状态规范](documentation-policy.md)。提交文档和发布前运行 `python tools/check_docs.py` 与 `python tools/check_docs_test.py`；检查失败须修正文档，不能吞错。
 
 ## 开发验证
 
