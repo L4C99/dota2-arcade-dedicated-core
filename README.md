@@ -38,7 +38,7 @@ Dota 2 Arcade Dedicated Server lifecycle manager for Windows and Linux.
 
 ## 下载与快速开始
 
-普通用户优先从 [GitHub Releases](https://github.com/L4C99/dota2-arcade-dedicated-core/releases) 下载对应平台二进制。v0.1.1 正式资产以该页面及校验清单为准；不要把 RC 包改名当作正式版。当前稳定版仍为 v0.1.1；本分支准备未发布的 v0.1.2 Release Hardening candidate。候选包核验和发布门槛见[交付说明](docs/delivery.md)与[Release Notes](RELEASE_NOTES.md)。
+普通用户优先从 [GitHub Releases](https://github.com/L4C99/dota2-arcade-dedicated-core/releases) 下载对应平台二进制。v0.1.1 正式资产以该页面及校验清单为准；不要把 RC 包改名当作正式版。当前稳定版仍为 v0.1.1；本分支正在完成 v0.1.2 Release Hardening 正式发布准备，产物版本为 0.1.2，尚未创建 tag 或 Release。最终产物核验和发布门槛见[交付说明](docs/delivery.md)与[Release Notes](RELEASE_NOTES.md)。
 
 1. 校验 ZIP 的 SHA256，解压到全新可写 ASCII 路径；Linux 确认 `d2core` 和 `launcher-example` 有执行权限。
 2. 运行 `d2core version --json`，核对版本、提交、构建时间与 `BUILD.json`，`gitDirty` 应为 false。
@@ -122,7 +122,7 @@ check 只做静态检查。创建时保存配置快照，编辑原模板不会�
 
 | 文档 | 内容 |
 | --- | --- |
-| [Release Notes](RELEASE_NOTES.md) | v0.1.2 候选范围与发布边界 |
+| [Release Notes](RELEASE_NOTES.md) | v0.1.2 内容与正式发布准备状态 |
 | [交付说明](docs/delivery.md) | 包内容、校验、正式发布验收 |
 | [操作说明](docs/operations.md) | 完整 CLI、端口、恢复、升级与失败回收 |
 | [模板说明](examples/README.md) | Windows/Linux 模板和资源布局 |

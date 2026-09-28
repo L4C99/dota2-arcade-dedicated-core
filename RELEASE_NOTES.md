@@ -1,14 +1,14 @@
-# v0.1.2 Release Hardening — candidate
+# v0.1.2 Release Hardening
 
-Status: **unreleased**, candidate version `0.1.2-rc.2`. Current stable remains **v0.1.1**, commit `988720ad85af1f0d97bfe98ec4da4fcbb070beea`. No v0.1.2 tag or GitHub Release is created at this gate.
+Status: **final release preparation; not yet published**, artifact version `0.1.2`. Current stable remains **v0.1.1**, commit `988720ad85af1f0d97bfe98ec4da4fcbb070beea`. No v0.1.2 tag or GitHub Release is created at this gate.
 
-## RC2 review remediation
+## Artifact provenance and verification
 
 - Deterministic LF checkout and fail-closed tracked-input / Git-blob provenance checks.
-- Static ZIP entries checked byte-for-byte against the fixed candidate commit.
+- Static ZIP entries checked byte-for-byte against the fixed source commit.
 - Machine-generated and checked manifest/checksums; optional externally supplied SHA256 anchors.
-- A single candidate VERSION input for builder, verifier and both CI scripts; contract drift regression tests.
-- Version-neutral operations paths. Historical RC1 remains traceable; no Runtime changes.
+- A single VERSION input for builder, verifier and both CI scripts; contract drift regression tests.
+- Version-neutral operations paths; no Runtime changes.
 
 ## Runtime
 
@@ -26,7 +26,7 @@ Steam connection success is necessary, not sufficient. Ready does not prove NAT/
 
 See [delivery](docs/delivery.md), [operations](docs/operations.md), [templates](examples/README.md), [local API](docs/local-api.md) and [A2S](docs/a2s.md). Game binaries, SDK, runtime libraries and compatible maps must be supplied separately. Same-user local management only; ASCII paths; IPv6 wildcard dual-stack coverage remains unverified; no capacity guarantee or automatic format-1 migration. Failed instances require explicit stop/reclaim. m0-inspect remains a non-production historical diagnostic.
 
-Candidate checks do not constitute new real-Dota acceptance. This round does not start Dota or deploy production nodes. Independent review and explicit Owner authorization are required before any final tag or Release.
+Artifact checks do not constitute new real-Dota acceptance. This release preparation does not start Dota or deploy production nodes. The RC2 independent delta review passed; the final version/document delta, artifacts and exact-SHA CI remain subject to the Owner Final Release Gate before any tag or GitHub Release.
 
 ## Licensing and historical assets
 
