@@ -60,11 +60,21 @@ def check_document(name, text, version):
     return errors
 
 
+def check_development_marker(source, version):
+    """源码开发标识跟随发布版本基号，不改变正式包的版本注入。"""
+    expected = version.split("-", 1)[0] + "-dev"
+    markers = re.findall(r'^var releaseVersion = "([^"]+)"', source, re.M)
+    if markers != [expected]:
+        return [f"cmd/d2core/main.go: 源码开发标识须为 {expected}，实际为 {markers}"]
+    return []
+
+
 def check_repo(root):
     version = (root / "tools/package/VERSION").read_text(encoding="utf-8").strip()
     if not re.fullmatch(VERSION, version):
         return ["tools/package/VERSION: 无效版本"]
-    errors = []
+    errors = check_development_marker(
+        (root / "cmd/d2core/main.go").read_text(encoding="utf-8"), version)
     for name in LIVING_DOCS:
         path = root / name
         if not path.is_file():

@@ -1,12 +1,19 @@
 """文档状态门槛的正反例；不依赖游戏或第三方 Python 包。"""
 
 import unittest
-from check_docs import check_document, LIVING_DOCS
+from check_docs import check_document, check_development_marker, LIVING_DOCS
 
 CHINESE = "这是文档检查的中文正文，用于确认中文语言门槛与版本状态规则彼此独立。\n"
 
 
 class DocumentationChecks(unittest.TestCase):
+    def test_source_development_marker(self):
+        self.assertFalse(check_development_marker('var releaseVersion = "0.1.2-dev"', "0.1.2"))
+        for marker in ("0.1.1-dev", "0.1.3-dev", "0.1.2"):
+            with self.subTest(marker=marker):
+                self.assertTrue(check_development_marker(f'var releaseVersion = "{marker}"', "0.1.2"))
+        self.assertTrue(check_development_marker("", "0.1.2"))
+
     def check(self, text, name="README.md", version="0.1.2"):
         return check_document(name, CHINESE + text, version)
 

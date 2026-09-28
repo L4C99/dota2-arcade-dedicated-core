@@ -25,7 +25,7 @@ import (
 )
 
 var buildTime = "unknown"        // Set with -ldflags at packaging time, not the commit timestamp.
-var releaseVersion = "0.1.1-dev" // Set by the release packager; source builds retain the development marker.
+var releaseVersion = "0.1.2-dev" // Source builds use the package VERSION base plus -dev; the release packager overrides this identity.
 
 const commandHelp = `Usage: d2core <command> [options]
 
