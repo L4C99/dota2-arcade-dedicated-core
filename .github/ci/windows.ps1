@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][ValidateSet('prepare','test','vet','build','race','timing')][string]$Mode)
+param([Parameter(Mandatory=$true)][ValidateSet('prepare','test','vet','build','race','timing','package')][string]$Mode)
 # CI only. Hosted tools only; no game installation or system configuration changes.
 $ErrorActionPreference='Stop'
 $logs=Join-Path $env:RUNNER_TEMP 'd2core-ci-logs'
@@ -22,6 +22,17 @@ if($Mode -eq 'prepare') {
     exit 0
 }
 Set-Location (Join-Path $env:GITHUB_WORKSPACE 'source')
+if($Mode -eq 'package') {
+    & $env:D2_GO test ./tools/package -count=1 2>&1 | Tee-Object -FilePath "$logs/package.log"
+    if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+    python tools/package/verify_test.py 2>&1 | Tee-Object -FilePath "$logs/package.log" -Append
+    if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+    $output=Join-Path $env:RUNNER_TEMP 'd2core-package'
+    & $env:D2_GO run ./tools/package --go $env:D2_GO --version 0.1.2-rc.1 --output $output 2>&1 | Tee-Object -FilePath "$logs/package.log" -Append
+    if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+    python tools/package/verify.py $output --commit (git rev-parse HEAD) --version 0.1.2-rc.1 --native 2>&1 | Tee-Object -FilePath "$logs/package-verification.json"
+    exit $LASTEXITCODE
+}
 switch($Mode){
     test { $checkArgs=@('test','./...','-count=1') }
     vet { $checkArgs=@('vet','./...') }

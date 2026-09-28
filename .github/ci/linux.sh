@@ -28,6 +28,11 @@ if [[ "$mode" == prepare ]]; then
     bash -c 'set -e; cd "$1/source"; "$2" mod download && "$2" mod verify && test -z "$(git status --porcelain)"' _ "$root" "$go_path"
   exit 0
 fi
+if [[ "$mode" == package ]]; then
+  sudo -u nobody -- env HOME="$D2_CI_ROOT/home" GOTOOLCHAIN=local GOCACHE="$D2_CI_ROOT/cache" GOMODCACHE="$D2_CI_ROOT/mod" TMPDIR="$D2_CI_ROOT/tmp" \
+    bash -c 'set -euo pipefail; cd "$1/source"; "$2" test ./tools/package -count=1; python3 tools/package/verify_test.py; "$2" run ./tools/package --go "$2" --version 0.1.2-rc.1 --output "$1/package"; python3 tools/package/verify.py "$1/package" --commit "$(git rev-parse HEAD)" --version 0.1.2-rc.1 --native' _ "$D2_CI_ROOT" "$D2_GO" 2>&1 | tee "$logs/package.log"
+  exit 0
+fi
 case "$mode" in
   test) args=(test ./... -count=1) ;;
   vet) args=(vet ./...) ;;

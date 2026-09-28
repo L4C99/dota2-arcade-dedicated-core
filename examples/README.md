@@ -1,4 +1,4 @@
-# v0.1.1 配置示例
+# 配置示例（模板 v1）
 
 [Windows](template.windows.json) 和 [Linux](template.linux.json) 展示模板 v1。字段、错误和占位符规则以 [本地协议](../docs/local-api.md) 为准。配置模块已提供静态校验和展开；历史生命周期实现与实机验收资料见 [M1 记录](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/v0.1.1/docs/validation/m1.md)，示例本身不表示已经通过进房验收。
 
@@ -12,11 +12,12 @@
 "successAll": [
   "ss_loading -> ss_active",
   "Host activate: Loading (n6)",
-  "[StandaloneServer] command-ready: command=windy_standalone_start, protocol=v2, map=n6"
+  "[StandaloneServer] command-ready: command=windy_standalone_start, protocol=v2, map=n6",
+  "SV:  Connection to Steam servers successful."
 ]
 ```
 
-没有验证过的地图失败短语时可使用 `"failureAny": []`，进程退出和启动超时处理仍保留；不能凭空填写通用 Error 文本。日志 ready 不等于 Steam 登录完成或客户端进房通过。
+没有验证过的地图失败短语时可使用 `"failureAny": []`，进程退出和启动超时处理仍保留；不能凭空填写通用 Error 文本。满足上述全部日志规则仍不等于客户端公网进房通过。
 
 `readiness` 中的 `REPLACE_WITH_VERIFIED_...` 是需要替换的普通文本，不是核心占位符。应按目标地图真实本代日志填写加载、Host activate 和地图级就绪证据，以及已确认的失败信号。所有 successAll 字面规则均命中且进程仍存活才可能就绪；不能只用端口开放或通用 `ss_active`，也不能直接套用未经验证的其他地图规则。保留这些示意文本会导致观察不到就绪并超时。
 
@@ -31,3 +32,11 @@ Linux 启动管理器前需要准备同一普通用户可访问的 Steam SDK、H
 ## 托管实例生命周期策略
 
 两个标准模板保留 `sv_hibernate_when_empty 0`，并显式设置 `dota_quit_after_game 0`：空服不依赖 Dota 自动 hibernate，一局结束后不依赖 Dota 自行退出，由 d2core / 上层管理端显式执行 stop → reclaim。它们是可按场景修改的示例部署策略，不是 protocol v1 或模板 schema 的硬要求，核心不强制注入这些 cvar。未加入其他 quit / hibernate 参数。
+
+## 公网用途的 Ready 合同
+
+`readiness.successAll` 定义模板对“本用途 Ready”的证据要求。面向公网玩家的 Dota 专服模板必须保留精确规则 `SV:  Connection to Steam servers successful.`，并与目标地图的加载、Host activate、地图脚本 command-ready 规则同时满足。地图加载、脚本就绪或 TCP/UDP 端口绑定不能代替 Steam GameServer connection success。
+
+该 Steam marker 是必要条件，不是充分条件。`room=ready` 不证明 NAT/防火墙公网可达、JoinInfo 映射正确、Steam URI 成功或真人可进入；部署方/上层仍须做网络及真人公网进服验收。Core 不负责这些外部条件。
+
+不要因为 Steam marker 出现较慢而删除它来缩短 Ready 时间；应检查服务端连接与合理的启动超时。successAll 的所有规则须来自目标地图/版本真实的本代 engine.log。新 VPK 不再产生旧规则时，不应简单删规则：先判断启动语义是否改变，建立并验证新的 TemplateRevision（部署方的模板版本记录，不是新增 schema 字段），再创建新实例。模板快照不会随原文件编辑而更新。

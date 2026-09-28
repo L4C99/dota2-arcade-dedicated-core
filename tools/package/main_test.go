@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -56,7 +57,7 @@ func TestRuntimeDistribution(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer z.Close()
-	for _, required := range []string{"LICENSE", "LICENSING.md"} {
+	for _, required := range []string{"LICENSE", "LICENSING.md", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md", "examples/README.md", "examples/template.windows.json", "examples/template.linux.json", "docs/delivery.md", "docs/operations.md", "docs/local-api.md", "docs/a2s.md", "README.md", "RELEASE_NOTES.md", "examples/launcher/main.go", "examples/launcher/README.md"} {
 		if file, err := z.Open(required); err != nil {
 			t.Errorf("missing required licensing file %s: %v", required, err)
 		} else {
@@ -98,5 +99,47 @@ func TestArchiveDeterministicAndNoOverwrite(t *testing.T) {
 	defer z.Close()
 	if len(z.File) != 2 || z.File[0].Name != "d2core" || z.File[0].Mode().Perm() != 0755 {
 		t.Fatal("archive layout or executable mode")
+	}
+}
+
+func TestPublicTemplateSteamRule(t *testing.T) {
+	for _, platform := range []string{"windows", "linux"} {
+		data, err := os.ReadFile(filepath.Join("..", "..", "examples", "template."+platform+".json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var template struct{ Readiness struct{ SuccessAll []string } }
+		if err := json.Unmarshal(data, &template); err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, rule := range template.Readiness.SuccessAll {
+			if rule == "SV:  Connection to Steam servers successful." {
+				found = true
+			}
+		}
+		if !found || len(template.Readiness.SuccessAll) != 4 {
+			t.Fatal("public template must retain Steam and three map evidence rules")
+		}
+	}
+}
+func TestReleasePaths(t *testing.T) {
+	if err := validateReleaseFiles(filepath.Join("..", "..")); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"../escape", "/absolute", "C:/absolute", "docs/../README.md", "docs\\file", ""} {
+		if validArchiveName(bad) {
+			t.Errorf("accepted %q", bad)
+		}
+	}
+	old := releaseFiles
+	defer func() { releaseFiles = old }()
+	releaseFiles = append(append([]string{}, old...), "LICENSE")
+	if validateReleaseFiles(filepath.Join("..", "..")) == nil {
+		t.Fatal("duplicate accepted")
+	}
+	releaseFiles = []string{"nonexistent-release-file"}
+	if validateReleaseFiles(filepath.Join("..", "..")) == nil {
+		t.Fatal("missing file accepted")
 	}
 }

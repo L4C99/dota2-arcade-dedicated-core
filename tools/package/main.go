@@ -21,7 +21,7 @@ import (
 
 // Explicit runtime distribution allowlist. Development evidence stays in source.
 var releaseFiles = []string{
-	"LICENSE", "LICENSING.md", "README.md", "RELEASE_NOTES.md", "docs/delivery.md", "docs/operations.md",
+	"LICENSE", "LICENSING.md", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md", "README.md", "RELEASE_NOTES.md", "docs/delivery.md", "docs/operations.md",
 	"docs/local-api.md", "docs/a2s.md", "examples/README.md",
 	"examples/template.windows.json", "examples/template.linux.json",
 	"examples/launcher/README.md", "examples/launcher/main.go",
@@ -45,7 +45,7 @@ func run() error {
 	goTool := flag.String("go", "go", "Go 1.27.1 binary")
 	out := flag.String("output", "dist", "archive output directory")
 	buildStamp := flag.String("build-time", "", "RFC3339 build timestamp; supply the same value for reproducible rebuilds")
-	release := flag.String("version", "0.1.1-dev", "release version without v, e.g. 0.1.1")
+	release := flag.String("version", "0.1.2-dev", "release version without v, e.g. 0.1.2-rc.1")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		return fmt.Errorf("unexpected arguments")
@@ -116,6 +116,9 @@ func run() error {
 			os.RemoveAll(stage)
 		}
 	}()
+	if e := validateReleaseFiles(root); e != nil {
+		return e
+	}
 	common := releaseFiles
 	for _, platform := range []string{"windows", "linux"} {
 		suffix := ""
@@ -135,14 +138,14 @@ func run() error {
 			}
 			files[target.name+suffix] = path
 		}
-		manifest, _ := json.MarshalIndent(map[string]any{"version": *release, "gitCommit": commit, "sourceTime": when.Format(time.RFC3339), "buildTime": builtAt.Format(time.RFC3339), "goVersion": "1.27.1", "os": platform, "arch": "amd64", "status": "built; artifact validation recorded separately"}, "", "  ")
+		manifest, _ := json.MarshalIndent(map[string]any{"version": *release, "gitCommit": commit, "gitDirty": false, "protocolVersion": 1, "schemaVersion": 1, "formatVersion": 2, "sourceTime": when.Format(time.RFC3339), "buildTime": builtAt.Format(time.RFC3339), "goVersion": "1.27.1", "os": platform, "arch": "amd64", "status": "built; artifact validation recorded separately"}, "", "  ")
 		mp := filepath.Join(stage, platform+"-BUILD.json")
 		if e = os.WriteFile(mp, manifest, 0600); e != nil {
 			return e
 		}
 		files["BUILD.json"] = mp
 		name := "d2core-" + commit[:12] + "-" + platform + "-amd64.zip"
-		if *release != "0.1.1-dev" {
+		if *release != "0.1.2-dev" {
 			name = "d2core-v" + *release + "-" + platform + "-amd64.zip"
 		}
 		path := filepath.Join(abs, name)
@@ -177,6 +180,12 @@ func run() error {
 	return nil
 }
 func archive(path string, files map[string]string, when time.Time) error {
+	for name := range files {
+		if !validArchiveName(name) {
+			return fmt.Errorf("invalid archive entry %q", name)
+		}
+	}
+
 	f, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if e != nil {
 		return e
@@ -224,4 +233,26 @@ func archive(path string, files map[string]string, when time.Time) error {
 		return e
 	}
 	return f.Close()
+}
+
+// Reject ambiguous paths before constructing the map (which would hide duplicates).
+func validArchiveName(name string) bool {
+	return name != "" && !strings.Contains(name, "\\") && !strings.Contains(name, ":") && !strings.HasPrefix(name, "/") && filepath.ToSlash(filepath.Clean(name)) == name && name != "." && name != ".." && !strings.HasPrefix(name, "../")
+}
+func validateReleaseFiles(root string) error {
+	seen := map[string]bool{}
+	for _, name := range releaseFiles {
+		if !validArchiveName(name) || seen[strings.ToLower(name)] {
+			return fmt.Errorf("invalid or duplicate release path %q", name)
+		}
+		seen[strings.ToLower(name)] = true
+		info, err := os.Stat(filepath.Join(root, filepath.FromSlash(name)))
+		if err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("release file is not regular: %s", name)
+		}
+	}
+	return nil
 }

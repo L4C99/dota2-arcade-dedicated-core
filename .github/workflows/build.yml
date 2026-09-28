@@ -90,6 +90,14 @@ jobs:
         if: ${{ !cancelled() && steps.windows.outcome == 'success' }}
         shell: pwsh
         run: ./ci-driver/.github/ci/windows.ps1 timing
+      - name: Linux package regression and native artifact identity
+        if: ${{ !cancelled() && steps.linux.outcome == 'success' }}
+        shell: bash
+        run: bash ci-driver/.github/ci/linux.sh package
+      - name: Windows package regression and native artifact identity
+        if: ${{ !cancelled() && steps.windows.outcome == 'success' }}
+        shell: pwsh
+        run: ./ci-driver/.github/ci/windows.ps1 package
       - name: Preserve check logs
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

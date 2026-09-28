@@ -1,6 +1,6 @@
-# v0.1.1 交付说明
+# v0.1.2 候选交付说明
 
-本文说明当前稳定 Runtime v0.1.1 的交付身份，以及 main 上后续交付维护的边界。现有正式资产与最终检查记录以 [v0.1.1 Release](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.1) 为准，annotated tag 解引用固定为 `988720ad85af1f0d97bfe98ec4da4fcbb070beea`。普通用户使用该 Release 二进制；main 最新源码或 RC 包不能冒充原正式资产。
+本轮准备未发布的 `0.1.2-rc.1` Release Hardening candidate；当前稳定 Runtime 仍为 v0.1.1。现有正式资产与最终检查记录以 [v0.1.1 Release](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.1) 为准，annotated tag 解引用固定为 `988720ad85af1f0d97bfe98ec4da4fcbb070beea`。普通用户使用该 Release 二进制；main 最新源码或 RC 包不能冒充原正式资产。
 
 核验正式身份时交叉检查 tag/commit、随包 BUILD.json、`d2core version --json` 和 Release SHA256 清单。main 后续文档、授权与白名单维护不追溯改变现有包内容。
 
@@ -9,7 +9,8 @@
 main 的未来 Windows/Linux amd64 ZIP 采用明确白名单，清单如下；已发布 v0.1.1 的实际内容仍以原 Release 为准：
 
 - d2core（Windows 为 .exe）、launcher-example、BUILD.json。
-- README.md、RELEASE_NOTES.md。
+- README.md、RELEASE_NOTES.md、CHANGELOG.md（区分候选与历史发布）。
+- THIRD_PARTY_NOTICES.md（固定工具链/实际依赖的许可证和再分发声明）。
 - LICENSE、LICENSING.md：未来新构建 Release 纳入白名单。历史 v0.1.1 不重新打包、不覆盖、不重发；授权范围由当前 LICENSE 与 LICENSING.md 澄清。
 - docs/delivery.md、operations.md、local-api.md、a2s.md。
 - examples/README.md、两平台模板、examples/launcher/README.md 与 main.go（外部调用示例源码）。
@@ -22,7 +23,7 @@ Go client 库通过源码模块使用；不随运行包复制整个仓库。laun
 
 1. Windows 用 `Get-FileHash <ZIP> -Algorithm SHA256`；Linux 用 `sha256sum -c <ZIP>.sha256`。
 2. 解压至全新可写 ASCII 目录；Linux 必要时 `chmod +x d2core launcher-example`。
-3. 执行 `d2core version --json`：正式包 version=0.1.1，与 BUILD.json.version 一致；gitCommit、buildTime 一致，gitDirty=false。
+3. 执行 `d2core version --json`：本轮候选包 version=0.1.2-rc.1，与 BUILD.json.version 一致；gitCommit、buildTime 一致，gitDirty=false。
 4. 按[模板说明](../examples/README.md)准备游戏资源和真实规则，以同一普通用户按[操作说明](operations.md)运行 check、serve、create。所有调用显式使用相同绝对 data-dir。
 5. 查询 operation/status 后实际进房，再 restart 重连，stop 并确认 reclaimed/stopped/cleanup=complete。保留校验值、版本、实例/操作 ID 和真实客户端结果。
 
@@ -35,3 +36,18 @@ v0.1.1 已正式发布，不从后续 main 重建、改名或覆盖原资产。�
 发布前检查包白名单、文档链接、version/BUILD.json、双平台运行及校验清单。原 RC 烟测证据只说明候选结果；正式包验证另记。详细维护流程在源码仓库 docs/development.md，开发工具不随运行包分发。
 
 更新核心前停止回收实例并备份必要历史；游戏/VPK/SDK 停服更新由运维执行。当前格式 2，不自动迁移格式 1；不手动修改校验或以新键掩盖未知操作结果。
+
+## 候选包的构建与独立核验
+
+维护者从固定候选提交的干净 checkout 使用 Go 1.27.1：
+
+```text
+go run ./tools/package --go ABS_GO --version 0.1.2-rc.1 --build-time RFC3339_UTC --output ABS_OUTPUT
+python tools/package/verify.py ABS_OUTPUT --commit FULL_CANDIDATE_SHA --version 0.1.2-rc.1 --native
+```
+
+上述验证脚本只在源码仓库提供，运行用户无需 Python。正式工具为两个平台生成 ZIP 和各自 .sha256；验证器核对完整白名单、ZIP 解压/CRC、SHA256、BUILD 身份和模板规则，并只执行本机平台的 version --json。另一平台原生执行由对应 CI runner 验证，不以交叉编译代替。
+
+BUILD.json 包含 version、gitCommit、gitDirty=false、构建/源码时间、Go 版本、os/arch 与兼容版本。候选源码 SHA 以实际构建记录为准，不预写 tag。公网模板必须同时满足地图/脚本与精确 Steam 规则，具体见[模板说明](../examples/README.md)。
+
+打包门槛失败时不发布。通过仅表示 candidate ready for independent review；本轮不创建 tag/Release，不更新 v0.1.1 资产。批准正式发布后，才更新 stable 表述及正式发布身份。

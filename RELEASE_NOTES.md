@@ -1,21 +1,25 @@
-# v0.1.1 Release Notes
+# v0.1.2 Release Hardening — candidate
 
-v0.1.1 是 Windows/Linux amd64 本地专服核心补丁版本。正式资产为 `d2core-v0.1.1-windows-amd64.zip`、`d2core-v0.1.1-linux-amd64.zip` 及 SHA256。完整提交和构建时间以随包 BUILD.json 与 `d2core version --json` 交叉核对。
+Status: **unreleased**, candidate version `0.1.2-rc.1`. Current stable remains **v0.1.1**, commit `988720ad85af1f0d97bfe98ec4da4fcbb070beea`. No v0.1.2 tag or GitHub Release is created at this gate.
 
-## 修复
+## Runtime
 
-- Windows 早退进程错误分类：身份读取失败时，仅在确认原进程已退出后归类为 START_FAILED；尚未确认退出时保持 IDENTITY_UNVERIFIED，不放宽身份核验。
-- operation 已对外 terminal 后，后续合法 restart 不再因为旧 worker 内部收尾窗口偶发 BUSY；保留内部收尾顺序，不依赖客户端 sleep/retry。
-- Windows/Linux CI 覆盖完整 test、vet、build、race，以及时序回归重复检查。Windows race 使用已验证的 external-link 条件。
+Lifecycle, local protocol, process identity/recovery, persistence, port allocation and readiness matching engine are unchanged. Compatibility remains protocolVersion=1, template schemaVersion=1 and disk formatVersion=2. This patch adds no Runtime feature or client API.
 
-## 标准托管模板
+## Release hardening
 
-两个标准 example 保留 `sv_hibernate_when_empty 0`，新增 `dota_quit_after_game 0`。空服不依赖自动 hibernate，一局结束后不依赖 Dota 自行退出，实例由外部管理端显式 stop → reclaim。这是可按场景调整的推荐部署策略，不是协议硬要求，核心不强制注入。
+- Self-contained Windows/Linux amd64 archives include LICENSE, LICENSING.md, CHANGELOG.md and third-party redistribution texts in THIRD_PARTY_NOTICES.md, alongside operating/API documentation and examples.
+- Public Dota templates require the exact `SV:  Connection to Steam servers successful.` in successAll **in addition to** verified map/script readiness. This is a template contract, not a new engine special case.
+- Packaging regression checks enforce required files, archive paths, build identity, template marker and SHA256; CI checks the native packaged version on both platforms.
 
-## 兼容与升级
+Steam connection success is necessary, not sufficient. Ready does not prove NAT/firewall reachability, JoinInfo mapping, Steam URI behavior or human entry. Deployment owners still perform those checks. Do not delete a slow readiness marker to obtain Ready sooner.
 
-protocolVersion=1、模板 schemaVersion=1、磁盘 formatVersion=2 均不变。v0.1.0 既有身份核验、PID 复用防护、停止/恢复、幂等和持久化安全约束保持。产品逻辑真实复验基线为 a174332d7a9b6008fcc820d05d38929a88c9dbc0；之后仅整理示例、说明与版本元数据。最终自动验证和 example 双平台真实烟测结果随 Release 验证记录提供。
+## Installation and limitations
 
-升级前显式停止并回收实例，备份所需历史，再替换运行包。格式 1 不自动迁移，不由核心更新 Dota 或 VPK。历史 v0.1.0 和 RC 标签、产物不覆盖。
+See [delivery](docs/delivery.md), [operations](docs/operations.md), [templates](examples/README.md), [local API](docs/local-api.md) and [A2S](docs/a2s.md). Game binaries, SDK, runtime libraries and compatible maps must be supplied separately. Same-user local management only; ASCII paths; IPv6 wildcard dual-stack coverage remains unverified; no capacity guarantee or automatic format-1 migration. Failed instances require explicit stop/reclaim. m0-inspect remains a non-production historical diagnostic.
 
-既有已知限制继续有效：仅本机同用户管理、ASCII 路径、运行库与地图自行准备、Ready 不代表真人可进房、IPv6 通配双栈未验证、无容量承诺。m0-inspect 仅为 M0 历史诊断、非生产用途，正式外部集成不依赖它。详见 README 与运维说明。
+Candidate checks do not constitute new real-Dota acceptance. This round does not start Dota or deploy production nodes. Independent review and explicit Owner authorization are required before any final tag or Release.
+
+## Licensing and historical assets
+
+See [LICENSE](LICENSE), [historical scope](LICENSING.md) and [third-party notices](THIRD_PARTY_NOTICES.md). **Historical v0.1.1 tag and release assets remain unchanged.** They are not rebuilt, replaced or relabeled; the new materials are included in future builds only.

@@ -8,7 +8,7 @@ Dota 2 Arcade Dedicated Server lifecycle manager for Windows and Linux.
 
 当前稳定版本：[v0.1.1](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.1)。当前仓库源码及文档采用 [MIT License](LICENSE)，公开供社区研究、使用、fork 和二次开发。
 
-历史版本的授权适用范围见 [LICENSING.md](LICENSING.md)。
+历史版本的授权适用范围见 [LICENSING.md](LICENSING.md)；二进制依赖的再分发材料见 [第三方声明](THIRD_PARTY_NOTICES.md)。
 
 ## 版本与分支
 
@@ -38,7 +38,7 @@ Dota 2 Arcade Dedicated Server lifecycle manager for Windows and Linux.
 
 ## 下载与快速开始
 
-普通用户优先从 [GitHub Releases](https://github.com/L4C99/dota2-arcade-dedicated-core/releases) 下载对应平台二进制。v0.1.1 正式资产以该页面及校验清单为准；不要把 RC 包改名当作正式版。v0.1.1 文件名、版本核验和发布门槛见[交付说明](docs/delivery.md)与[Release Notes](RELEASE_NOTES.md)。
+普通用户优先从 [GitHub Releases](https://github.com/L4C99/dota2-arcade-dedicated-core/releases) 下载对应平台二进制。v0.1.1 正式资产以该页面及校验清单为准；不要把 RC 包改名当作正式版。当前稳定版仍为 v0.1.1；本分支准备未发布的 v0.1.2 Release Hardening candidate。候选包核验和发布门槛见[交付说明](docs/delivery.md)与[Release Notes](RELEASE_NOTES.md)。
 
 1. 校验 ZIP 的 SHA256，解压到全新可写 ASCII 路径；Linux 确认 `d2core` 和 `launcher-example` 有执行权限。
 2. 运行 `d2core version --json`，核对版本、提交、构建时间与 `BUILD.json`，`gitDirty` 应为 false。
@@ -96,6 +96,8 @@ steamchina://connect/203.0.113.10:27017
 
 模板 v1 定义可执行文件、工作目录、参数、独立 cfg、日志就绪规则和超时。默认推荐数字工坊 ID：服务端布局为 `game/dota_addons/数字ID/pak01_dir.vpk`，地图命令使用 `customgamemode="数字ID"`。核心不下载 VPK，不保证任意服务端修改版与客户端资源兼容。
 
+公网 Dota 模板的 successAll 必须包含 `SV:  Connection to Steam servers successful.`，并同时满足实测地图/脚本规则；端口开放不能替代它，Ready 也不能替代真人公网进服验收。
+
 check 只做静态检查。创建时保存配置快照，编辑原模板不会改变已创建实例；需要新配置时回收旧实例，以新键创建。详见[模板说明](examples/README.md)。
 
 ## 本地 API 集成
@@ -120,7 +122,7 @@ check 只做静态检查。创建时保存配置快照，编辑原模板不会�
 
 | 文档 | 内容 |
 | --- | --- |
-| [Release Notes](RELEASE_NOTES.md) | v0.1.1 范围、版本与发布状态 |
+| [Release Notes](RELEASE_NOTES.md) | v0.1.2 候选范围与发布边界 |
 | [交付说明](docs/delivery.md) | 包内容、校验、正式发布验收 |
 | [操作说明](docs/operations.md) | 完整 CLI、端口、恢复、升级与失败回收 |
 | [模板说明](examples/README.md) | Windows/Linux 模板和资源布局 |

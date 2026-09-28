@@ -217,7 +217,7 @@ d2core list --data-dir <数据绝对路径> --json
 
 可用 serve --port-min 27015 --port-max 27064 --history-days 7 --min-free-mib 1024 指定自动端口、回收后历史保留天数和磁盘余量阈值；create 省略 --port 即自动选择。历史到期后实例、操作和创建键一起移除，旧ID返回NOT_FOUND，调用方的新意图始终使用唯一键。缩短保留期前备份需要长期留存的证据。list 的storage返回最近空间检查及清理错误；在线每分钟维护，离线期间以运维磁盘告警兜底。活跃日志没有硬大小上限，不因日志容量停止房间。
 
-运行前提：Linux专服需要可加载的steamclient.so等游戏依赖，可单独准备SteamCMD运行库，不要求核心运行时安装Go。Windows新用户需要Steam SDK能找到该用户可用的Steam安装及DLL路径。具体准备依安装方式而定；核心不自动改注册表或安装运行库。若用独立cfg挂载做隔离，必须保留安装自带默认cfg/vcfg，并确认目录可由运行用户写入。地图ready不代表Steam认证完成或客户端可达，仍需独立核验网络及实际进房。
+运行前提：Linux专服需要可加载的steamclient.so等游戏依赖，可单独准备SteamCMD运行库，不要求核心运行时安装Go。Windows新用户需要Steam SDK能找到该用户可用的Steam安装及DLL路径。具体准备依安装方式而定；核心不自动改注册表或安装运行库。若用独立cfg挂载做隔离，必须保留安装自带默认cfg/vcfg，并确认目录可由运行用户写入。仅地图 ready 不代表 Steam GameServer 连接完成；公网模板还必须命中精确 Steam 成功规则，仍需独立核验网络及实际进房。
 
 ## 升级遗留记录与人工回收
 
@@ -242,10 +242,16 @@ d2core list --data-dir <数据绝对路径> --json
 
 portCheck=partial不等于已确认冲突，也不等于检查完全部端口。可确认的TCP监听、主端口UDP及与TCP同号的UDP服务端点参与跨实例冲突检查；独立UDP端点用途、IPv6通配的双栈覆盖无法确定时，在notes中明确保留。确认冲突时status=conflict、room不再ready；核心不自动杀房或换端口。运维需结合notes、模板、实际监听和网络映射验证，不把partial改写为“全部无冲突”。
 
-其他保留边界：模板ready不等于Steam认证完成或客户端可达；历史键受retention期限约束；普通整机重启验收不等于断电验收；不承诺一般性子进程树管理，真实PID复用未自然观察到。Windows Go1.27.1配合现有MinGW8.1验证race时使用 `go test -race -ldflags=-linkmode=external ./... -count=1`；默认链接曾在测试开始前报0xc0000139，不能把该失败解释为数据竞争或跳过race。
+其他保留边界：模板 ready 取决于 successAll；公网模板必须包含 Steam 连接成功规则，但仍不证明客户端可达；历史键受retention期限约束；普通整机重启验收不等于断电验收；不承诺一般性子进程树管理，真实PID复用未自然观察到。Windows Go1.27.1配合现有MinGW8.1验证race时使用 `go test -race -ldflags=-linkmode=external ./... -count=1`；默认链接曾在测试开始前报0xc0000139，不能把该失败解释为数据竞争或跳过race。
 
 ## 托管模板与运行观察
 
 标准模板使用 `sv_hibernate_when_empty 0` 和 `dota_quit_after_game 0`，使上层管理端显式掌握实例生命周期；这是可修改的推荐部署策略，不是协议硬要求。结束实例应显式 stop，并确认 reclaimed / stopped / cleanup=complete 后才释放上层 Allocation 与节点容量。进程消失不等于回收完成。
 
 历史真实运行中曾观察到 Dota 未经 d2core stop 自行结束，但本轮 Windows/Ubuntu 受控实验未能通过“所有真人退出”稳定复现，具体触发条件尚未确认。两端约五分钟观察末态仍为 active/running/ready，结论 INCOMPLETE；未验证自然退出后的 stop/reclaim，正常游戏结算触发路径也未独立验证。此观察未复现新的核心缺陷，不阻塞 v0.1.1。
+
+## 公网模板 Ready 与部署验收
+
+公网 Dota 专服必须在 successAll 中保留 `SV:  Connection to Steam servers successful.`，同时匹配目标地图加载、Host activate 与脚本 command-ready。不能用端口绑定或地图加载替代 Steam GameServer 连接成功，也不能因为它较慢而删去规则。规则必须从目标版本的本代日志验证，更新 VPK 时重新核对模板版本；见[模板合同](../examples/README.md#公网用途的-ready-合同)。
+
+这只是必要证据；Ready 不保证 NAT/防火墙、JoinInfo 映射、Steam URI 或真人公网进房。部署方仍负责实际公网验收。未命中时检查 `logs` 与启动环境，失败实例保留证据后执行显式 `stop`，轮询 operation 并确认 `reclaimed / stopped / cleanup=complete`。

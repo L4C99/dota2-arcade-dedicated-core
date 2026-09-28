@@ -1,6 +1,15 @@
 # Changelog
 
-这里只汇总正式 Runtime Release。main 发布后的文档、授权澄清和维护提交不构成新版本，也不自动替代生产集成固定的 tag/commit。
+本文区分未发布候选与正式 Runtime Release。main 发布后的文档、授权澄清和维护提交不构成新版本，也不自动替代生产集成固定的 tag/commit。
+
+## v0.1.2（未发布；0.1.2-rc.1 candidate）
+
+- Release artifact completeness：自包含文档、配置示例与构建身份校验。
+- 纳入 MIT 授权、历史授权范围及实际依赖许可证/声明材料。
+- 强化公网模板的精确 Steam readiness 必需规则及 Ready 边界说明。
+- 增加打包回归、ZIP 内容/校验值/原生版本验证。
+- 无 Runtime 新功能：生命周期、协议 1、模板 schema 1、磁盘格式 2 保持不变。
+- 历史 v0.1.1 tag 与资产保持不变，当前 stable 仍为 v0.1.1。
 
 ## v0.1.1
 
@@ -9,7 +18,7 @@
 - protocolVersion=1、模板 schemaVersion=1、磁盘 formatVersion=2 不变。
 - 固定源码：`988720ad85af1f0d97bfe98ec4da4fcbb070beea`。
 
-详见 [Release Notes](RELEASE_NOTES.md) 和 [正式 Release](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.1)。
+详见 [固定版本 Release Notes](https://github.com/L4C99/dota2-arcade-dedicated-core/blob/v0.1.1/RELEASE_NOTES.md) 和 [正式 Release](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.1)。
 
 ## v0.1.0
 

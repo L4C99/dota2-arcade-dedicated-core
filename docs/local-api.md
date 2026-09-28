@@ -79,6 +79,8 @@ evidence 为 {generation,observedAt,source,matched,valid}：source 为本代日�
 
 readiness.successAll 是必须全部命中的非空字面字符串列表；failureAny 是失败字面字符串列表。匹配仅扫描本代 engine.log，失败优先，不使用旧日志或固定延时推断就绪；缺证据持续 loading 到超时。经验证的地图级组合只适用于对应已测地图。列表各最多32项，每项最多512字节、非空；不使用正则表达式。
 
+Core 没有硬编码 Steam 登录成功逻辑；Ready 是模板 successAll 对当前 generation engine.log 的证据匹配，模板作者负责定义目标用途所需证据。公网 Dota 专服模板必须在地图/脚本规则之外包含精确的 `SV:  Connection to Steam servers successful.`。这是模板使用合同，不改变 protocolVersion=1 或 schemaVersion=1。Steam marker 必要但不充分，room=ready 不证明公网可达、JoinInfo、Steam URI 或真人进房成功；详见[模板说明](../examples/README.md)。
+
 timeouts 包含 startupSeconds / stopSeconds / forceSeconds，省略或0使用120/10/5；负数或大于3600拒绝。模板配置的唯一 CLI 覆盖是 port，最终规范化模板和 port 一起持久化；重启不用重新读取源模板。快照不冻结 VPK/额外 exec 内容。
 
 参数数组至少且仅一次包含相邻项 -port / {{game_port}}、-con_logfile / {{log_path}}、+exec / {{cfg_name}}；保持原有顺序，不通过 shell，不隐式注入 VAC/hibernate。保留 instance_id、game_port、cfg_name、log_path 四种占位符，路径字段/name 不允许占位符，未知/残缺占位符拒绝。arguments 中占位符作为完整参数，cfg 中可嵌入行内；cfg 每项只允许一行，不接受 NUL/CR/LF，双引号须闭合。
