@@ -10,6 +10,12 @@ Dota 2 Arcade Dedicated Server lifecycle manager for Windows and Linux.
 
 历史版本的授权适用范围见 [LICENSING.md](LICENSING.md)。
 
+## 版本与分支
+
+正式稳定 Runtime 为 **v0.1.1**，固定源码提交 `988720ad85af1f0d97bfe98ec4da4fcbb070beea`；`protocolVersion=1`、模板 `schemaVersion=1`、磁盘 `formatVersion=2`。
+
+`main` 是发布后的维护/开发线（post-release maintenance/development line）。后续文档与授权说明不改变 v0.1.1 的 runtime/protocol 基线；从 main 构建的开发版本不会自动成为已验证的 Runtime Release。生产集成应固定正式 tag/commit 与 Release 资产，不追踪 main。Platform 等集成方升级 Core 须另行授权，完成兼容性和真实环境验收后使用新的正式 Release。
+
 ## 维护状态与项目关系
 
 本项目主要源于作者实际 Dota 2 Arcade Dedicated Server 部署需求，并公开作为社区研究和参考资料。维护以作者实际需求和空闲时间为准，不承诺持续开发、功能请求实现或技术支持；Issues 按 best-effort 处理。

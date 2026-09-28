@@ -2,6 +2,14 @@
 
 源码仓库保留 cmd/internal/client 自动测试、.github CI，以及 docs/validation 中有长期复验价值的 M0—M4、RC 和复核结论。这些材料不是运行依赖，也不随 Release 包分发。
 
+## main 与稳定 Runtime
+
+当前稳定 Runtime 为 v0.1.1 / `988720ad85af1f0d97bfe98ec4da4fcbb070beea`；Platform 当前固定依赖此 tag/commit，protocolVersion=1、模板 schemaVersion=1、磁盘 formatVersion=2。
+
+main 在发布后继续承载文档、授权澄清及未来开发，不等于当前稳定 Runtime Release。生产集成应固定正式 tag/commit；维护者或 Agent 不得把 main 新提交自动当作升级依据。Core 升级须经独立授权、新的正式 Release、兼容性检查和真实环境验收，本轮文档维护不改变既有依赖。未来版本方向与版本号由 Owner 另行决定，不承诺下一版本或发布日期。
+
+正式版本摘要见 [Changelog](../CHANGELOG.md)，历史发布事实见相应 tag/Release。
+
 ## 仓库布局
 
 - cmd、internal：CLI 和核心实现、自动测试。

@@ -4,6 +4,8 @@
 
 当前稳定产品状态以[项目首页](../../README.md)、[正式 v0.1.1 Release](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.1) 和[固定 tag 源码](https://github.com/L4C99/dota2-arcade-dedicated-core/tree/v0.1.1)为准。后续版本以相应正式 Release 和固定 tag 为准。
 
+这些是 historical point-in-time evidence：M0—M4、RC、review fixes 反映形成时的事实。main 后续文档和授权维护不会重写历史验证结论，也不会自动成为新的 Runtime 基线。
+
 | 资料 | 验证范围 |
 | --- | --- |
 | [M0](m0.md) | 双平台引擎启动、资源、就绪与退出的早期可行性验证 |

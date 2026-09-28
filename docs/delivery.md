@@ -1,10 +1,12 @@
 # v0.1.1 交付说明
 
-本文对应 v0.1.1；正式资产与最终检查记录以 GitHub Releases 为准。普通用户使用 Release 二进制。不要将 RC.2 包改名作为 v0.1.1。
+本文说明当前稳定 Runtime v0.1.1 的交付身份，以及 main 上后续交付维护的边界。现有正式资产与最终检查记录以 [v0.1.1 Release](https://github.com/L4C99/dota2-arcade-dedicated-core/releases/tag/v0.1.1) 为准，annotated tag 解引用固定为 `988720ad85af1f0d97bfe98ec4da4fcbb070beea`。普通用户使用该 Release 二进制；main 最新源码或 RC 包不能冒充原正式资产。
+
+核验正式身份时交叉检查 tag/commit、随包 BUILD.json、`d2core version --json` 和 Release SHA256 清单。main 后续文档、授权与白名单维护不追溯改变现有包内容。
 
 ## 运行包内容
 
-Windows/Linux amd64 ZIP 采用明确白名单，仅包含：
+main 的未来 Windows/Linux amd64 ZIP 采用明确白名单，清单如下；已发布 v0.1.1 的实际内容仍以原 Release 为准：
 
 - d2core（Windows 为 .exe）、launcher-example、BUILD.json。
 - README.md、RELEASE_NOTES.md。
@@ -28,7 +30,7 @@ check、编译成功及 ready 均不能单独代表玩家可进入房间。失�
 
 ## 发布与升级门槛
 
-维护者从远端固定完整提交的新干净 checkout 构建，固定 Go 1.27.1，执行打包工具 --version 0.1.1；版本标签为 v0.1.1。不复用开发产物、不覆盖旧 tag 或包。提交与 SHA256 在最终发布时填写到发布记录，不能预写虚构值。
+v0.1.1 已正式发布，不从后续 main 重建、改名或覆盖原资产。未来 Runtime 版本须独立授权并使用新的 version/tag/Release；从已验收的远端固定完整提交建立干净 checkout，固定工具链，按本次授权版本构建。不复用开发产物，不覆盖历史 tag 或包。提交与 SHA256 按实际新产物填写到该版本发布记录，不预写虚构值。
 
 发布前检查包白名单、文档链接、version/BUILD.json、双平台运行及校验清单。原 RC 烟测证据只说明候选结果；正式包验证另记。详细维护流程在源码仓库 docs/development.md，开发工具不随运行包分发。
 
