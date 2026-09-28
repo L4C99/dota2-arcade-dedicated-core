@@ -48,7 +48,7 @@ a2s 的 dota-dir 是包含 game 子目录的安装根目录，不是 game/dota�
 
 ### 帮助与退出码
 
-v0.1.1 支持 `d2core help`、`d2core --help`、`d2core -h` 输出完整命令列表，帮助退出0；无参数输出完整用法但仍退出2。`d2core help logs` 或 `d2core logs --help` 查看参数，A2S 用 `d2core a2s enable --help`。
+v0.1.2 支持 `d2core help`、`d2core --help`、`d2core -h` 输出完整命令列表，帮助退出0；无参数输出完整用法但仍退出2。`d2core help logs` 或 `d2core logs --help` 查看参数，A2S 用 `d2core a2s enable --help`。该帮助行为自 v0.1.1 起保持不变。
 
 正常管理调用退出0表示请求成功，create/restart/stop 仍需查询 operation；执行错误通常退出1，CLI用法错误通常退出2。m0-inspect 使用独立错误路径，参数/检查失败返回1。
 

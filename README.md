@@ -14,7 +14,7 @@ Dota 2 Arcade Dedicated Server lifecycle manager for Windows and Linux.
 
 正式稳定版本为 **v0.1.2**，固定源码为 `v0.1.2` tag 解引用的 publication commit（`v0.1.2^{commit}`），完整 SHA 须与随包 BUILD.json.gitCommit 和发布记录一致；`protocolVersion=1`、模板 `schemaVersion=1`、磁盘 `formatVersion=2`。
 
-`main` 是发布后的维护/开发线（post-release maintenance/development line）。后续文档与授权说明不改变 v0.1.1 的 runtime/protocol 基线；从 main 构建的开发版本不会自动成为已验证的 Runtime Release。生产集成应固定正式 tag/commit 与 Release 资产，不追踪 main。Platform 等集成方升级 Core 须另行授权，完成兼容性和真实环境验收后使用新的正式 Release。
+`main` 是发布后的维护/开发线（post-release maintenance/development line）。后续 `main` 上的文档、授权说明或开发提交不会追溯改变已发布 **v0.1.2 Release** 的 Runtime/protocol 身份；**v0.1.2 本身未改变 v0.1.1 已验证的 Runtime 行为和协议兼容基线**。从 `main` 构建的开发版本不会自动成为已验证的 Runtime Release。生产集成应固定正式 tag/commit 与 Release 资产，不追踪 main。Platform 等集成方升级 Core 须另行授权，完成兼容性和真实环境验收后使用新的正式 Release。
 
 ## 维护状态与项目关系
 
