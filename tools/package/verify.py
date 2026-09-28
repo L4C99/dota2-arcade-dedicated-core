@@ -64,7 +64,9 @@ def verify(directory, commit, version, native=False):
                 if native and platform.system().lower() == target:
                     binary = Path(temp) / ('d2core'+suffix)
                     binary.chmod(0o755)
-                    value = json.loads(subprocess.check_output([str(binary), 'version', '--json'], text=True))
+                    response = json.loads(subprocess.check_output([str(binary), 'version', '--json'], text=True))
+                    assert response['ok'] is True and response['protocolVersion'] == 1, response
+                    value = response['result']
                     for key in ('version', 'gitCommit', 'gitDirty', 'buildTime', 'protocolVersion', 'schemaVersion', 'formatVersion'):
                         assert value[key] == build[key], (key, value, build)
                     assert value['goVersion'] == 'go'+build['goVersion']
