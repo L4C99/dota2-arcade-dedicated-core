@@ -10,6 +10,8 @@ main 在发布后继续承载文档、授权澄清及未来开发，不等于当
 
 正式版本摘要见 [版本变更记录](../CHANGELOG.md)，历史发布事实见相应 tag/Release。
 
+已确认且保留到未来重构处理的遗留问题见[技术债账本](future-rearchitecture-debt.md)；该账本不构成下一版本计划。
+
 ## 仓库布局
 
 - cmd、internal：CLI 和核心实现、自动测试。
